@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, Helvetica, sans-serif;
+        }
+
+        body{
+
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            background:linear-gradient(135deg,#4facfe,#00f2fe);
+
+        }
+
+        .container{
+
+            width:500px;
+            background:#ffffff;
+            padding:40px;
+            border-radius:20px;
+            text-align:center;
+            box-shadow:0px 10px 30px rgba(0,0,0,0.2);
+
+        }
+
+        h1{
+
+            color:#333;
+            margin-bottom:15px;
+            font-size:35px;
+
+        }
+
+        h2{
+
+            color:#555;
+            margin-bottom:30px;
+            font-weight:normal;
+
+        }
+
+        p{
+
+            color:#666;
+            font-size:18px;
+            margin-bottom:30px;
+
+        }
+
+        .btn{
+
+            display:inline-block;
+            padding:12px 30px;
+            background:#2196F3;
+            color:white;
+            text-decoration:none;
+            border-radius:8px;
+            font-size:17px;
+            transition:0.3s;
+
+        }
+
+        .btn:hover{
+
+            background:#1976D2;
+            transform:scale(1.05);
+
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 150px;
+            box-shadow: 0px 5px 10px gray;
+            border-radius: 5px;
+        }
+
+        .dropdown-content a {
+            display: block;
+            padding: 10px;
+            color: black;
+            text-decoration: none;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #ddd;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🎉 Login Successful</h1>
+
+    <h2>Welcome User</h2>
+
+    <p>
+        You have successfully logged into your account.
+    </p>
+    <div class="dropdown">
+        <button class="dropbtn">
+            Select ▼
+        </button>
+
+        <div class="dropdown-content">
+            <a th:href="@{/customer}">Customer</a>
+            <a th:href="@{/farmer}">Farmer</a>
+        </div>
+    </div>
+
+    <a href="/login" class="btn">
+        Logout
+    </a>
+
+</div>
+
+</body>
+</html>

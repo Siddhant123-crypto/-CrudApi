@@ -1,13 +1,12 @@
-package com.Siddhant.UserApp.Service;
+package com.Siddhant.UserApp.Service.Impl;
 
 import com.Siddhant.UserApp.Entity.User;
 import com.Siddhant.UserApp.Repository.UserRepository;
 import com.Siddhant.UserApp.Service.UserService;
-import com.Siddhant.UserApp.dto.LoginRequest;
-import com.Siddhant.UserApp.dto.RegisterRequest;
+import com.Siddhant.UserApp.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -20,63 +19,63 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
 
     @Override
-    public String register(RegisterRequest request) {
+    public RegisterResponse register(RegisterData request) {
 
         try {
 
             // Name Validation
             if (request.getName() == null || request.getName().trim().isEmpty()) {
-                return "Name is required";
+                return new RegisterResponse("Name is required", null);
             }
 
             if (!request.getName().matches("^[A-Za-z]+\\s+[A-Za-z]+$")) {
-                return "Please enter first name and last name";
+                return new RegisterResponse("please enter the valid email",null);
             }
 
             // Email Validation
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return "Email is required";
+                return new RegisterResponse("email is required",null);
             }
 
             if (!Pattern.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$", request.getEmail())) {
-                return "Please enter valid email";
+                return new RegisterResponse("Please enter valid email",null);
             }
 
             // Mobile Validation
             if (request.getMobile() == null || request.getMobile().trim().isEmpty()) {
-                return "Mobile number is required";
+                return new RegisterResponse("Mobile number is required",null);
             }
 
             if (!request.getMobile().matches("^[6-9]\\d{9}$")) {
-                return "Please enter 10 digit mobile number";
+                return new RegisterResponse("Please enter 10 digit mobile number",null);
             }
 
             // Password Validation
             if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-                return "Password is required";
+                return new RegisterResponse("Password is required",null);
             }
 
             if (!request.getPassword().matches("^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@#$%^&+=!]).{6,}$")) {
-                return "Password must contain uppercase, lowercase, number and special character";
+                return new RegisterResponse("Password must contain uppercase, lowercase, number and special character",null);
             }
 
             // State Validation
             if (request.getState() == null || request.getState().trim().isEmpty()) {
-                return "State is required";
+                return new RegisterResponse( "State is required",null);
             }
 
             // Email Duplicate
             Optional<User> email = userRepository.findByEmail(request.getEmail());
 
             if (email.isPresent()) {
-                return "Email already exists";
+                return new RegisterResponse("Email already exists",null);
             }
 
             // Mobile Duplicate
             Optional<User> mobile = userRepository.findByMobile(request.getMobile());
 
             if (mobile.isPresent()) {
-                return "Mobile number already exists";
+                return new RegisterResponse("Mobile number already exists",null);
             }
 
             User user = new User();
@@ -98,55 +97,94 @@ public class UserServiceImpl implements UserService {
 
             userRepository.save(user);
 
-            return "Registration Successful";
+            RegisterData response = new RegisterData();
+
+            response.setUserId(user.getUserId());
+            response.setName(user.getName());
+            response.setEmail(user.getEmail());
+            response.setMobile(user.getMobile());
+            response.setState(user.getState());
+
+            response.setCreatedBy(user.getCreatedBy());
+            response.setCreatedOn(user.getCreatedOn());
+
+            response.setUpdatedBy(user.getUpdatedBy());
+            response.setUpdatedOn(user.getUpdatedOn());
+
+            response.setIsActive(user.getIsActive());
+            response.setIsDelete(user.getIsDelete());
+
+            response.setStatus(user.getStatus());
+
+            return new RegisterResponse(
+                    "Registration Successful",
+                    response
+            );
 
         } catch (Exception e) {
 
-            return e.getMessage();
+            return new RegisterResponse(
+                    e.getMessage(),
+                    null
+            );
 
         }
 
     }
 
+
+
     @Override
-    public String login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
 
         try {
 
             Optional<User> optional = userRepository.findByEmail(request.getEmail());
 
             if (optional.isEmpty()) {
-                return "Email not found";
+                return new LoginResponse("Email not found", null);
             }
 
             User user = optional.get();
 
             if (!user.getPassword().equals(request.getPassword())) {
-                return "Incorrect Password";
+                return new LoginResponse("Incorrect Password", null);
             }
 
             if (!user.getIsActive()) {
-                return "User Account is Inactive";
+                return new LoginResponse("User Account is Inactive", null);
             }
 
             if (user.getIsDelete()) {
-                return "User Account Deleted";
+                return new LoginResponse("User Account Deleted", null);
             }
 
             user.setLastLogin(LocalDateTime.now());
 
+            if (user.getLoginCount() == null) {
+                user.setLoginCount(1);
+            } else {
+                user.setLoginCount(user.getLoginCount() + 1);
+            }
+
             userRepository.save(user);
 
-            return "Login Successful";
+            LoginRequest response = new LoginRequest();
+
+            response.setEmail(user.getEmail());
+            response.setPassword(user.getPassword());
+
+            return new LoginResponse(
+                    "Login Successful. Login Count : " + user.getLoginCount(),
+                    response
+            );
 
         } catch (Exception e) {
 
-            return e.getMessage();
+            return new LoginResponse(e.getMessage(), null);
 
         }
-
     }
-
     @Override
     public List<User> getAllUsers() {
 
@@ -155,29 +193,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUserById(Integer id) {
+    public User getUserById(UUID id) {
 
         Optional<User> optional = userRepository.findById(id);
 
         if (optional.isPresent()) {
-
             return optional.get();
-
         }
 
         return null;
-
     }
-
     @Override
-    public String updateUser(Integer id, RegisterRequest request) {
+    public UpdateResponse updateUser(UUID id, RegisterData request) {
 
         Optional<User> optional = userRepository.findById(id);
 
         if (optional.isEmpty()) {
-
-            return "User Not Found";
-
+            return new UpdateResponse("User Not Found", null);
         }
 
         User user = optional.get();
@@ -193,30 +225,49 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return "User Updated Successfully";
+        RegisterData response = new RegisterData();
 
+        response.setUserId(user.getUserId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setMobile(user.getMobile());
+        response.setPassword(user.getPassword());
+        response.setState(user.getState());
+
+        response.setCreatedBy(user.getCreatedBy());
+        response.setCreatedOn(user.getCreatedOn());
+        response.setUpdatedBy(user.getUpdatedBy());
+        response.setUpdatedOn(user.getUpdatedOn());
+
+        response.setIsActive(user.getIsActive());
+        response.setIsDelete(user.getIsDelete());
+        response.setStatus(user.getStatus());
+
+        return new UpdateResponse(
+                "User Updated Successfully",
+                response
+        );
     }
 
     @Override
-    public String deleteUser(Integer id) {
+    public String deleteUser(UUID id) {
 
         Optional<User> optional = userRepository.findById(id);
 
         if (optional.isEmpty()) {
-
             return "User Not Found";
-
         }
 
         User user = optional.get();
 
         user.setIsDelete(true);
         user.setIsActive(false);
+        user.setLoginCount(0);
+        user.setUpdatedOn(LocalDateTime.now());
 
         userRepository.save(user);
 
         return "User Deleted Successfully";
-
     }
 
 }
