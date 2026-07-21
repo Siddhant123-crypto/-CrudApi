@@ -2,17 +2,34 @@ package com.Siddhant.UserApp.Entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer userId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private UUID userId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private Status status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role")
+    private Role role;
 
     @Column(nullable = false)
     private String name;
+
+    @Column(name = "village")
+    private String village;
+
+    @Column(name = "address")
+    private String address;
+
+    @Column(name = "postal_code")
+    private String postalCode;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -25,6 +42,12 @@ public class User {
 
     @Column(nullable = false)
     private String state;
+
+    @Column(name = "profile_photo")
+    private String profilePhoto;
+
+    @Column(name = "login_count")
+    private Integer loginCount = 0;
 
     private Boolean isDelete;
 
@@ -40,14 +63,35 @@ public class User {
 
     private LocalDateTime lastLogin;
 
-    public User() {
+    public String getVillage() {
+        return village;
     }
 
-    public Integer getUserId() {
+    public void setVillage(String village) {
+        this.village = village;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 
@@ -89,6 +133,14 @@ public class User {
 
     public void setState(String state) {
         this.state = state;
+    }
+
+    public Integer getLoginCount() {
+        return loginCount;
+    }
+
+    public void setLoginCount(Integer loginCount) {
+        this.loginCount = loginCount;
     }
 
     public Boolean getIsDelete() {
@@ -145,5 +197,29 @@ public class User {
 
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public String getProfilePhoto() {
+        return profilePhoto;
+    }
+
+    public void setProfilePhoto(String profilePhoto) {
+        this.profilePhoto = profilePhoto;
     }
 }

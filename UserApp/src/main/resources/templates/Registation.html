@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, Helvetica, sans-serif;
+        }
+
+        body{
+            background:#f1f5f9;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+        }
+
+        .container{
+            width:420px;
+            background:#ffffff;
+            padding:30px;
+            border-radius:12px;
+            box-shadow:0 0 15px rgba(0,0,0,0.15);
+        }
+
+        h2{
+            text-align:center;
+            margin-bottom:25px;
+            color:#333;
+        }
+
+        .input-group{
+            margin-bottom:18px;
+        }
+
+        label{
+            display:block;
+            margin-bottom:6px;
+            font-weight:bold;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            border:1px solid #ccc;
+            border-radius:6px;
+            font-size:15px;
+        }
+
+        /* Password field */
+        .password-box{
+            position:relative;
+        }
+
+        .password-box input{
+            padding-right:45px;
+        }
+
+        .password-box i{
+            position:absolute;
+            right:15px;
+            top:50%;
+            transform:translateY(-50%);
+            cursor:pointer;
+            color:#666;
+        }
+
+        button{
+            width:100%;
+            padding:13px;
+            background:#007bff;
+            color:white;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        button:hover{
+            background:#0056b3;
+        }
+
+        #message{
+            margin-top:20px;
+            text-align:center;
+            font-weight:bold;
+        }
+
+        .login-link{
+            margin-top:20px;
+            text-align:center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h2>User Registration</h2>
+
+    <div class="input-group">
+        <label>Full Name</label>
+        <input type="text" id="name">
+    </div>
+
+    <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="email">
+    </div>
+
+    <div class="input-group">
+        <label>Mobile Number</label>
+        <input type="text" id="mobile">
+    </div>
+
+    <div class="input-group">
+        <label>Password</label>
+
+        <div class="password-box">
+            <input type="password" id="password">
+            <i class="fa-solid fa-eye" id="togglePassword"></i>
+        </div>
+
+    </div>
+
+    <div class="input-group">
+        <label>State</label>
+        <input type="text" id="state">
+    </div>
+
+    <button onclick="registerUser()">Register</button>
+
+    <div id="message"></div>
+
+    <div class="login-link">
+        Already registered?
+        <a href="/login">Login Here</a>
+    </div>
+
+</div>
+
+<script>
+
+    // Show / Hide Password
+    const password = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+
+    togglePassword.addEventListener("click", function(){
+
+        if(password.type === "password"){
+            password.type = "text";
+            togglePassword.classList.remove("fa-eye");
+            togglePassword.classList.add("fa-eye-slash");
+        }else{
+            password.type = "password";
+            togglePassword.classList.remove("fa-eye-slash");
+            togglePassword.classList.add("fa-eye");
+        }
+
+    });
+
+    async function registerUser(){
+
+        const user={
+            name:document.getElementById("name").value,
+            email:document.getElementById("email").value,
+            mobile:document.getElementById("mobile").value,
+            password:document.getElementById("password").value,
+            state:document.getElementById("state").value
+        };
+
+        const response=await fetch("/user/register",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify(user)
+        });
+
+        const result=await response.text();
+
+        document.getElementById("message").innerHTML=result;
+
+        if(result==="Registration Successful"){
+            document.getElementById("message").style.color="green";
+
+            setTimeout(function(){
+                window.location.href="/login";
+            },1000);
+
+        }else{
+            document.getElementById("message").style.color="red";
+        }
+    }
+
+</script>
+
+</body>
+</html>

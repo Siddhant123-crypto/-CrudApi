@@ -1,23 +1,25 @@
 package com.Siddhant.UserApp.Service;
 
 import com.Siddhant.UserApp.Entity.User;
-import com.Siddhant.UserApp.dto.LoginRequest;
-import com.Siddhant.UserApp.dto.RegisterRequest;
+import com.Siddhant.UserApp.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface UserService {
 
-    String register(RegisterRequest request);
+    RegisterResponse register(RegisterData request);
 
-    String login(LoginRequest request);
+    LoginResponse login(LoginRequest request);
 
     List<User> getAllUsers();
 
-    User getUserById(Integer id);
+    UpdateResponse updateUser(UUID id, RegisterData request);
 
-    String updateUser(Integer id, RegisterRequest request);
+    User getUserById(UUID id);
 
-    String deleteUser(Integer id);
+    String deleteUser(UUID id);
 
+    String uploadPhoto(UUID userId, MultipartFile file);
 }
