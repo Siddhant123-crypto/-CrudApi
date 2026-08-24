@@ -1,5 +1,6 @@
 package com.Siddhant.UserApp.Service;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,73 +12,43 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
-
 @Service
 public class FileStorageService {
-
+    private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
     @Value("${file.upload-dir}")
     private String uploadDir;
-
-    // Save File
     public String saveFile(MultipartFile file) throws IOException {
-
         if (file == null || file.isEmpty()) {
-            System.out.println("File is Empty");
+            log.warn("Attempted to save an empty file.");
             return null;
         }
-
-        System.out.println("========================================");
-        System.out.println("Original File Name : " + file.getOriginalFilename());
-        System.out.println("File Size          : " + file.getSize());
-        System.out.println("Content Type       : " + file.getContentType());
-        System.out.println("Upload Dir         : " + uploadDir);
-
+        log.debug("Original File Name : {}, Size: {}, Content Type: {}", 
+                file.getOriginalFilename(), file.getSize(), file.getContentType());
         File folder = new File(uploadDir);
-
         if (!folder.exists()) {
-
             boolean created = folder.mkdirs();
-
-            System.out.println("Folder Created : " + created);
+            log.info("Upload folder created: {}", created);
         }
-
-        System.out.println("Folder Exists  : " + folder.exists());
-        System.out.println("Upload Folder  : " + folder.getAbsolutePath());
-
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-
         File destination = new File(folder, fileName);
-
-        System.out.println("Saving To      : " + destination.getAbsolutePath());
-
-        FileOutputStream fos = new FileOutputStream(destination);
-        fos.write(file.getBytes());
-        fos.close();
-
-        System.out.println("File Exists    : " + destination.exists());
-        System.out.println("File Saved Successfully");
-        System.out.println("========================================");
-
+        log.debug("Saving file to: {}", destination.getAbsolutePath());
+        try (FileOutputStream fos = new FileOutputStream(destination)) {
+            fos.write(file.getBytes());
+        }
+        log.info("File {} saved successfully", fileName);
         return fileName;
     }
-
-    // Read File
     public byte[] getFile(String fileName) {
-
         try {
-
             Path path = Paths.get(uploadDir, fileName);
-
+            if (!Files.exists(path)) {
+                log.warn("File not found: {}", fileName);
+                return null;
+            }
             return Files.readAllBytes(path);
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
+        } catch (IOException e) {
+            log.error("Error reading file: {}", fileName, e);
             return null;
-
         }
-
     }
-
 }

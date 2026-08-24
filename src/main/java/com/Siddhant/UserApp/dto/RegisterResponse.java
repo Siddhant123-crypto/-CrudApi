@@ -1,31 +1,31 @@
 package com.Siddhant.UserApp.dto;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class RegisterResponse {
 
     private String message;
     private Object response;
-
-    public RegisterResponse() {
-    }
+    private String accessToken;
+    private long expiresIn;
 
     public RegisterResponse(String message, Object response) {
         this.message = message;
         this.response = response;
     }
 
-    public String getMessage() {
-        return message;
-    }
+    public RegisterResponse(
+            String message,
+            RegisterData response,
+            String accessToken,
+            long expiresIn) {
 
-    public void setMessage(String message) {
         this.message = message;
-    }
-
-    public Object getResponse() {
-        return response;
-    }
-
-    public void setResponse(Object response) {
         this.response = response;
+        this.accessToken = accessToken;
+        this.expiresIn = expiresIn;
     }
-
 }
