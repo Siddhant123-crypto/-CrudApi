@@ -1,5 +1,6 @@
 package com.Siddhant.UserApp.Entity;
 
+import com.Siddhant.UserApp.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,6 +14,10 @@ import java.util.UUID;
 @Table(name = "order_items")
 public class OrderItem {
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status = OrderStatus.PENDING;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderItemId;
@@ -20,6 +25,10 @@ public class OrderItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "farmer_id", nullable = false)
+    private FarmerProfile farmer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

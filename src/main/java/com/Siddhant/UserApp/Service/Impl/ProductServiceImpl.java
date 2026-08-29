@@ -67,6 +67,7 @@ public class ProductServiceImpl implements ProductService {
             product.setQuantity(request.getQuantity());
             product.setUnit(request.getUnit());
             product.setDescription(request.getDescription());
+            product.setHarvestDate(request.getHarvestDate());
             // -------------------------------------------------
             // PHOTO
             // -------------------------------------------------
@@ -147,6 +148,7 @@ public class ProductServiceImpl implements ProductService {
             product.setQuantity(request.getQuantity());
             product.setUnit(request.getUnit());
             product.setDescription(request.getDescription());
+            product.setHarvestDate(request.getHarvestDate());
             // -------------------------------------------------
             // UPDATE PHOTO ONLY IF NEW PHOTO PROVIDED
             // -------------------------------------------------

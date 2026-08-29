@@ -16,5 +16,6 @@ public class ProductRequest {
     private Double quantity;
     private ProductUnit unit;
     private String description;
+    private String harvestDate;
     private Boolean removeVideo;
 }

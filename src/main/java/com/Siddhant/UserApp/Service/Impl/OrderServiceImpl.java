@@ -1,29 +1,18 @@
 package com.Siddhant.UserApp.Service.Impl;
 
-import com.Siddhant.UserApp.Entity.FarmerProfile;
-import com.Siddhant.UserApp.Entity.Order;
-import com.Siddhant.UserApp.Entity.OrderItem;
-import com.Siddhant.UserApp.Entity.Product;
-import com.Siddhant.UserApp.Entity.User;
-
-import com.Siddhant.UserApp.Repository.FarmerProfileRepository;
-import com.Siddhant.UserApp.Repository.OrderRepository;
-import com.Siddhant.UserApp.Repository.ProductRepository;
-import com.Siddhant.UserApp.Repository.UserRepository;
-
+import com.Siddhant.UserApp.Entity.*;
+import com.Siddhant.UserApp.Repository.*;
 import com.Siddhant.UserApp.Service.OrderService;
-
 import com.Siddhant.UserApp.dto.*;
 import com.Siddhant.UserApp.enums.OrderStatus;
 import com.Siddhant.UserApp.enums.PaymentStatus;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -42,297 +31,116 @@ public class OrderServiceImpl implements OrderService {
             OrderRepository orderRepository,
             ProductRepository productRepository,
             UserRepository userRepository,
-            FarmerProfileRepository farmerProfileRepository
-    ) {
-
+            FarmerProfileRepository farmerProfileRepository) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.farmerProfileRepository = farmerProfileRepository;
     }
 
-    // ==========================================================
-    // CREATE ORDER
-    // ==========================================================
+    // ==================== CREATE ORDER ====================
 
     @Override
     @Transactional
-    public OrderResponse createOrder(
-            OrderRequest request
-    ) {
+    public OrderResponse createOrder(OrderRequest request) {
 
-        if (request == null) {
-
-            throw new RuntimeException(
-                    "Order request cannot be null"
-            );
-        }
+        if (request == null)
+            throw new RuntimeException("Order request cannot be null");
 
         if (request.getDeliveryAddress() == null ||
-                request.getDeliveryAddress().trim().isEmpty()) {
+                request.getDeliveryAddress().trim().isEmpty())
+            throw new RuntimeException("Delivery address is required");
 
-            throw new RuntimeException(
-                    "Delivery address is required"
-            );
-        }
+        if (request.getItems() == null || request.getItems().isEmpty())
+            throw new RuntimeException("Order must contain at least one product");
 
-        if (request.getItems() == null ||
-                request.getItems().isEmpty()) {
+        User customer = getLoggedInCustomer();
 
-            throw new RuntimeException(
-                    "Order must contain at least one product"
-            );
-        }
+        Order order = new Order();
+        order.setCustomer(customer);
+        order.setCustomerName(customer.getName());
+        order.setCustomerMobile(customer.getMobile());
 
-        // ------------------------------------------------------
-        // LOGGED-IN CUSTOMER
-        // ------------------------------------------------------
+        order.setDeliveryAddress(request.getDeliveryAddress().trim());
+        order.setVillage(request.getVillage());
+        order.setPostalCode(request.getPostalCode());
+        order.setState(request.getState());
 
-        User customer =
-                getLoggedInCustomer();
+        order.setStatus(OrderStatus.PENDING);
+        order.setPaymentStatus(PaymentStatus.PENDING);
 
-        // ------------------------------------------------------
-        // CREATE ORDER
-        // ------------------------------------------------------
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
 
-        Order order =
-                new Order();
+        for (OrderItemRequest itemRequest : request.getItems()) {
 
-        order.setCustomer(
-                customer
-        );
-
-        order.setCustomerName(
-                customer.getName()
-        );
-
-        order.setCustomerMobile(
-                customer.getMobile()
-        );
-
-        // ------------------------------------------------------
-        // DELIVERY ADDRESS
-        // ------------------------------------------------------
-
-        order.setDeliveryAddress(
-                request.getDeliveryAddress().trim()
-        );
-
-        order.setVillage(
-                request.getVillage()
-        );
-
-        order.setPostalCode(
-                request.getPostalCode()
-        );
-
-        order.setState(
-                request.getState()
-        );
-
-        // ------------------------------------------------------
-        // INITIAL STATUS
-        // ------------------------------------------------------
-
-        order.setStatus(
-                OrderStatus.PENDING
-        );
-
-        // ------------------------------------------------------
-        // PAYMENT STATUS
-        // ------------------------------------------------------
-
-        order.setPaymentStatus(
-                PaymentStatus.PENDING
-        );
-
-        BigDecimal totalAmount =
-                BigDecimal.ZERO;
-
-        List<OrderItem> orderItems =
-                new ArrayList<>();
-
-        FarmerProfile selectedFarmer =
-                null;
-
-        // ------------------------------------------------------
-        // PROCESS ORDER ITEMS
-        // ------------------------------------------------------
-
-        for (OrderItemRequest itemRequest :
-                request.getItems()) {
-
-            if (itemRequest == null ||
-                    itemRequest.getProductId() == null) {
-
-                throw new RuntimeException(
-                        "Product id is required"
-                );
-            }
+            if (itemRequest == null || itemRequest.getProductId() == null)
+                throw new RuntimeException("Product id is required");
 
             if (itemRequest.getQuantity() == null ||
-                    itemRequest.getQuantity()
-                            .compareTo(BigDecimal.ZERO) <= 0) {
+                    itemRequest.getQuantity().compareTo(BigDecimal.ZERO) <= 0)
+                throw new RuntimeException("Quantity must be greater than zero");
 
+            Product product = productRepository.findById(itemRequest.getProductId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Product not found: " + itemRequest.getProductId()));
+
+            if (!Boolean.TRUE.equals(product.getIsActive()))
                 throw new RuntimeException(
-                        "Quantity must be greater than zero"
-                );
-            }
+                        "Product is not active: " + product.getProductName());
 
-            // --------------------------------------------------
-            // FIND PRODUCT
-            // --------------------------------------------------
-
-            Product product =
-                    productRepository
-                            .findById(
-                                    itemRequest.getProductId()
-                            )
-                            .orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Product not found: "
-                                                    + itemRequest.getProductId()
-                                    )
-                            );
-
-            // --------------------------------------------------
-            // ACTIVE CHECK
-            // --------------------------------------------------
-
-            if (!Boolean.TRUE.equals(
-                    product.getIsActive()
-            )) {
-
+            if (Boolean.TRUE.equals(product.getIsDelete()))
                 throw new RuntimeException(
-                        "Product is not active: "
-                                + product.getProductName()
-                );
-            }
+                        "Product is deleted: " + product.getProductName());
 
-            // --------------------------------------------------
-            // DELETE CHECK
-            // --------------------------------------------------
+            // ==================== FARMER ====================
 
-            if (Boolean.TRUE.equals(
-                    product.getIsDelete()
-            )) {
+            FarmerProfile productFarmer = product.getFarmer();
 
+            if (productFarmer == null)
                 throw new RuntimeException(
-                        "Product is deleted: "
-                                + product.getProductName()
-                );
-            }
+                        "Farmer not found for product: " + product.getProductName());
 
-            // --------------------------------------------------
-            // FARMER
-            // --------------------------------------------------
+            // ==================== STOCK ====================
 
-            FarmerProfile productFarmer =
-                    product.getFarmer();
-
-            if (productFarmer == null) {
-
-                throw new RuntimeException(
-                        "Farmer not found for product: "
-                                + product.getProductName()
-                );
-            }
-
-            // --------------------------------------------------
-            // ONE ORDER = ONE FARMER
-            // --------------------------------------------------
-
-            if (selectedFarmer == null) {
-
-                selectedFarmer =
-                        productFarmer;
-
-            } else if (
-                    !selectedFarmer.getId()
-                            .equals(
-                                    productFarmer.getId()
-                            )
-            ) {
-
-                throw new RuntimeException(
-                        "Products from different farmers must be placed in separate orders"
-                );
-            }
-
-            // --------------------------------------------------
-            // STOCK CHECK
-            // --------------------------------------------------
-
-            if (product.getQuantity() == null) {
-
+            if (product.getQuantity() == null)
                 throw new RuntimeException(
                         "Stock information not available for product: "
-                                + product.getProductName()
-                );
-            }
+                                + product.getProductName());
 
             BigDecimal availableQuantity =
-                    BigDecimal.valueOf(
-                            product.getQuantity()
-                    );
+                    BigDecimal.valueOf(product.getQuantity());
 
             BigDecimal requestedQuantity =
                     itemRequest.getQuantity();
 
-            if (availableQuantity.compareTo(
-                    requestedQuantity
-            ) < 0) {
-
+            if (availableQuantity.compareTo(requestedQuantity) < 0)
                 throw new RuntimeException(
                         "Insufficient stock for product: "
                                 + product.getProductName()
-                                + ". Available: "
-                                + availableQuantity
-                                + ", Requested: "
-                                + requestedQuantity
-                );
-            }
+                                + ". Available: " + availableQuantity
+                                + ", Requested: " + requestedQuantity);
 
-            // --------------------------------------------------
-            // PRICE
-            // --------------------------------------------------
+            // ==================== PRICE ====================
 
             BigDecimal price =
-                    BigDecimal.valueOf(
-                            product.getPrice()
-                    );
+                    BigDecimal.valueOf(product.getPrice());
 
             BigDecimal subtotal =
-                    price.multiply(
-                            requestedQuantity
-                    );
+                    price.multiply(requestedQuantity);
 
-            // --------------------------------------------------
-            // CREATE ORDER ITEM
-            // --------------------------------------------------
+            // ==================== ORDER ITEM ====================
 
-            OrderItem orderItem =
-                    new OrderItem();
+            OrderItem orderItem = new OrderItem();
 
-            orderItem.setOrder(
-                    order
-            );
+            orderItem.setOrder(order);
+            orderItem.setFarmer(productFarmer);   // IMPORTANT
+            orderItem.setProduct(product);
+            orderItem.setStatus(OrderStatus.PENDING);
 
-            orderItem.setProduct(
-                    product
-            );
-
-            orderItem.setProductName(
-                    product.getProductName()
-            );
-
-            orderItem.setPrice(
-                    price
-            );
-
-            orderItem.setQuantity(
-                    requestedQuantity
-            );
+            orderItem.setProductName(product.getProductName());
+            orderItem.setPrice(price);
+            orderItem.setQuantity(requestedQuantity);
 
             orderItem.setUnit(
                     product.getUnit() != null
@@ -340,1035 +148,630 @@ public class OrderServiceImpl implements OrderService {
                             : null
             );
 
-            orderItem.setSubtotal(
-                    subtotal
-            );
+            orderItem.setSubtotal(subtotal);
 
-            orderItems.add(
-                    orderItem
-            );
+            orderItems.add(orderItem);
 
-            // --------------------------------------------------
-            // TOTAL
-            // --------------------------------------------------
+            totalAmount = totalAmount.add(subtotal);
 
-            totalAmount =
-                    totalAmount.add(
-                            subtotal
-                    );
-
-            // --------------------------------------------------
-            // REDUCE STOCK
-            // --------------------------------------------------
-
-            BigDecimal updatedQuantity =
-                    availableQuantity.subtract(
-                            requestedQuantity
-                    );
+            // ==================== REDUCE STOCK ====================
 
             product.setQuantity(
-                    updatedQuantity.doubleValue()
+                    availableQuantity
+                            .subtract(requestedQuantity)
+                            .doubleValue()
             );
         }
 
-        // ------------------------------------------------------
-        // FARMER CHECK
-        // ------------------------------------------------------
+        order.setTotalAmount(totalAmount);
+        order.setOrderItems(orderItems);
 
-        if (selectedFarmer == null) {
+        // ==================== SAVE PRODUCTS ====================
 
-            throw new RuntimeException(
-                    "Farmer could not be identified"
-            );
-        }
+        for (OrderItem item : orderItems)
+            productRepository.save(item.getProduct());
 
-        order.setFarmer(
-                selectedFarmer
-        );
+        // ==================== SAVE ORDER ====================
 
-        order.setTotalAmount(
-                totalAmount
-        );
+        Order savedOrder = orderRepository.save(order);
 
-        order.setOrderItems(
-                orderItems
-        );
-
-        // ------------------------------------------------------
-        // SAVE UPDATED STOCK
-        // ------------------------------------------------------
-
-        for (OrderItem item :
-                orderItems) {
-
-            productRepository.save(
-                    item.getProduct()
-            );
-        }
-
-        // ------------------------------------------------------
-        // SAVE ORDER
-        // ------------------------------------------------------
-
-        Order savedOrder =
-                orderRepository.save(
-                        order
-                );
-
-        return convertToResponse(
-                savedOrder
-        );
+        return convertToResponse(savedOrder);
     }
 
-
-    // ==========================================================
-    // CUSTOMER ORDER DETAILS
-    // ==========================================================
+    // ==================== CUSTOMER ORDER ====================
 
     @Override
     @Transactional(readOnly = true)
-    public OrderResponse getOrderById(
-            UUID orderId
-    ) {
+    public OrderResponse getOrderById(UUID orderId) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
-            throw new RuntimeException(
-                    "Order id is required"
-            );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new RuntimeException("User is not authenticated");
         }
+        String email = authentication.getName();
 
-        // ------------------------------------------------------
-        // LOGGED-IN CUSTOMER
-        // ------------------------------------------------------
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        User customer =
-                getLoggedInCustomer();
+        java.util.Optional<FarmerProfile> farmerOpt = farmerProfileRepository.findByUser_Email(email);
 
-        // ------------------------------------------------------
-        // FIND ORDER
-        // ------------------------------------------------------
-
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
-
-        // ------------------------------------------------------
-        // CHECK CUSTOMER OWNERSHIP
-        // ------------------------------------------------------
-
-        if (order.getCustomer() == null ||
-                !order.getCustomer()
-                        .getUserId()
-                        .equals(
-                                customer.getUserId()
-                        )) {
-
-            throw new RuntimeException(
-                    "You are not authorized to view this order"
-            );
+        if (farmerOpt.isPresent()) {
+            FarmerProfile farmer = farmerOpt.get();
+            boolean hasFarmerItem = order.getOrderItems().stream()
+                    .anyMatch(item -> item.getFarmer().getId().equals(farmer.getId()));
+            if (!hasFarmerItem) {
+                throw new RuntimeException("You are not authorized to view this order");
+            }
+            return convertToResponse(order, farmer);
+        } else {
+            User customer = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            if (order.getCustomer() == null || !order.getCustomer().getUserId().equals(customer.getUserId())) {
+                throw new RuntimeException("You are not authorized to view this order");
+            }
+            return convertToResponse(order);
         }
-
-        return convertToResponse(
-                order
-        );
     }
 
-
-    // ==========================================================
-    // FARMER ORDERS
-    // ==========================================================
+    // ==================== FARMER ORDERS ====================
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponse> getFarmerOrders() {
 
-        FarmerProfile farmer =
-                getLoggedInFarmer();
+        FarmerProfile farmer = getLoggedInFarmer();
 
         List<Order> orders =
-                orderRepository.findByFarmer_Id(
-                        farmer.getId()
-                );
+                orderRepository.findDistinctByOrderItemsFarmer_Id(farmer.getId());
 
-        List<OrderResponse> responses =
-                new ArrayList<>();
+        List<OrderResponse> responses = new ArrayList<>();
 
-        for (Order order :
-                orders) {
-
-            responses.add(
-                    convertToResponse(order)
-            );
-        }
+        for (Order order : orders)
+            responses.add(convertToResponse(order, farmer));
 
         return responses;
     }
-
-
-    // ==========================================================
-    // FARMER ORDERS BY STATUS
-    // ==========================================================
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderResponse> getFarmerOrdersByStatus(
-            OrderStatus status
-    ) {
+            OrderStatus status) {
 
-        if (status == null) {
+        if (status == null)
+            throw new RuntimeException("Order status is required");
 
-            throw new RuntimeException(
-                    "Order status is required"
-            );
-        }
-
-        FarmerProfile farmer =
-                getLoggedInFarmer();
+        FarmerProfile farmer = getLoggedInFarmer();
 
         List<Order> orders =
-                orderRepository.findByFarmer_IdAndStatus(
-                        farmer.getId(),
-                        status
-                );
+                orderRepository.findDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmer.getId(), status);
 
-        List<OrderResponse> responses =
-                new ArrayList<>();
+        List<OrderResponse> responses = new ArrayList<>();
 
-        for (Order order :
-                orders) {
-
-            responses.add(
-                    convertToResponse(order)
-            );
-        }
+        for (Order order : orders)
+            responses.add(convertToResponse(order, farmer));
 
         return responses;
     }
 
-
-    // ==========================================================
-    // FARMER ACCEPT ORDER
-    // PENDING -> CONFIRMED
-    // ==========================================================
+    // ==================== ACCEPT ORDER ====================
 
     @Override
     @Transactional
-    public OrderResponse acceptOrder(
-            UUID orderId
-    ) {
+    public OrderResponse acceptOrder(UUID orderId) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
-            throw new RuntimeException(
-                    "Order id is required"
-            );
+        FarmerProfile farmer = getLoggedInFarmer();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        checkFarmerOwnership(order, farmer);
+
+        boolean anyUpdated = false;
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getFarmer().getId().equals(farmer.getId())) {
+                if (item.getStatus() == OrderStatus.PENDING) {
+                    item.setStatus(OrderStatus.CONFIRMED);
+                    anyUpdated = true;
+                }
+            }
         }
 
-        FarmerProfile farmer =
-                getLoggedInFarmer();
+        if (!anyUpdated)
+            throw new RuntimeException("No pending items to accept for this farmer");
 
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
+        updateOrderOverallStatus(order);
 
-        checkFarmerOwnership(
-                order,
-                farmer
-        );
-
-        if (order.getStatus() !=
-                OrderStatus.PENDING) {
-
-            throw new RuntimeException(
-                    "Only PENDING orders can be accepted"
-            );
-        }
-
-        order.setStatus(
-                OrderStatus.CONFIRMED
-        );
-
-        Order updatedOrder =
-                orderRepository.save(
-                        order
-                );
-
-        return convertToResponse(
-                updatedOrder
-        );
+        return convertToResponse(orderRepository.save(order), farmer);
     }
 
-
-    // ==========================================================
-    // UPDATE ORDER STATUS
-    // ==========================================================
+    // ==================== UPDATE STATUS ====================
 
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(
             UUID orderId,
-            OrderStatus newStatus
-    ) {
+            OrderStatus newStatus) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
-            throw new RuntimeException(
-                    "Order id is required"
-            );
-        }
+        if (newStatus == null)
+            throw new RuntimeException("Order status is required");
 
-        if (newStatus == null) {
+        if (newStatus == OrderStatus.CANCELLED)
+            throw new RuntimeException("Use cancel order API to cancel the order");
 
-            throw new RuntimeException(
-                    "Order status is required"
-            );
-        }
+        if (newStatus == OrderStatus.CONFIRMED)
+            throw new RuntimeException("Use accept order API to accept the order");
 
-        if (newStatus ==
-                OrderStatus.CANCELLED) {
+        FarmerProfile farmer = getLoggedInFarmer();
 
-            throw new RuntimeException(
-                    "Use cancel order API to cancel the order"
-            );
-        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        if (newStatus ==
-                OrderStatus.CONFIRMED) {
+        checkFarmerOwnership(order, farmer);
 
-            throw new RuntimeException(
-                    "Use accept order API to accept the order"
-            );
-        }
+        boolean anyUpdated = false;
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getFarmer().getId().equals(farmer.getId())) {
+                OrderStatus currentStatus = item.getStatus();
+                if (currentStatus == newStatus)
+                    continue;
 
-        FarmerProfile farmer =
-                getLoggedInFarmer();
+                boolean valid = false;
 
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
+                switch (currentStatus) {
+                    case CONFIRMED:
+                        valid = newStatus == OrderStatus.PROCESSING;
+                        break;
 
-        checkFarmerOwnership(
-                order,
-                farmer
-        );
+                    case PROCESSING:
+                        valid = newStatus == OrderStatus.OUT_FOR_DELIVERY;
+                        break;
 
-        OrderStatus currentStatus =
-                order.getStatus();
+                    case OUT_FOR_DELIVERY:
+                        valid = newStatus == OrderStatus.DELIVERED;
+                        break;
 
-        if (currentStatus == newStatus) {
-
-            throw new RuntimeException(
-                    "Order is already in "
-                            + currentStatus
-                            + " status"
-            );
-        }
-
-        boolean validTransition =
-                false;
-
-        switch (currentStatus) {
-
-            case CONFIRMED:
-
-                if (newStatus ==
-                        OrderStatus.PROCESSING) {
-
-                    validTransition = true;
+                    case PENDING:
+                    case DELIVERED:
+                    case CANCELLED:
+                        valid = false;
+                        break;
                 }
 
-                break;
+                if (!valid)
+                    throw new RuntimeException(
+                            "Invalid status transition for item " + item.getProductName() + ": "
+                                    + currentStatus + " -> " + newStatus);
 
-            case PROCESSING:
-
-                if (newStatus ==
-                        OrderStatus.OUT_FOR_DELIVERY) {
-
-                    validTransition = true;
-                }
-
-                break;
-
-            case OUT_FOR_DELIVERY:
-
-                if (newStatus ==
-                        OrderStatus.DELIVERED) {
-
-                    validTransition = true;
-                }
-
-                break;
-
-            case PENDING:
-            case DELIVERED:
-            case CANCELLED:
-
-                validTransition = false;
-
-                break;
+                item.setStatus(newStatus);
+                anyUpdated = true;
+            }
         }
 
-        if (!validTransition) {
-
-            throw new RuntimeException(
-                    "Invalid status transition: "
-                            + currentStatus
-                            + " -> "
-                            + newStatus
-            );
+        if (anyUpdated) {
+            updateOrderOverallStatus(order);
+            orderRepository.save(order);
         }
 
-        order.setStatus(
-                newStatus
-        );
-
-        Order updatedOrder =
-                orderRepository.save(
-                        order
-                );
-
-        return convertToResponse(
-                updatedOrder
-        );
+        return convertToResponse(order, farmer);
     }
 
-
-    // ==========================================================
-    // CUSTOMER CANCEL ORDER
-    // ==========================================================
+    // ==================== CUSTOMER CANCEL ====================
 
     @Override
     @Transactional
-    public OrderResponse cancelOrder(
-            UUID orderId,
-            String reason
-    ) {
+    public OrderResponse cancelOrder(UUID orderId, String reason) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
-            throw new RuntimeException(
-                    "Order id is required"
-            );
-        }
+        User customer = getLoggedInCustomer();
 
-        User customer =
-                getLoggedInCustomer();
-
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
         if (order.getCustomer() == null ||
-                !order.getCustomer()
-                        .getUserId()
-                        .equals(
-                                customer.getUserId()
-                        )) {
-
+                !order.getCustomer().getUserId()
+                        .equals(customer.getUserId()))
             throw new RuntimeException(
-                    "You are not authorized to cancel this order"
-            );
+                    "You are not authorized to cancel this order");
+
+        OrderStatus status = order.getStatus();
+
+        if (status == OrderStatus.CANCELLED)
+            throw new RuntimeException("Order is already cancelled");
+
+        if (status == OrderStatus.DELIVERED)
+            throw new RuntimeException("Delivered order cannot be cancelled");
+
+        if (status == OrderStatus.OUT_FOR_DELIVERY)
+            throw new RuntimeException("Out for delivery order cannot be cancelled");
+
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getStatus() != OrderStatus.CANCELLED) {
+                restoreItemStock(item);
+                item.setStatus(OrderStatus.CANCELLED);
+            }
         }
 
-        OrderStatus currentStatus =
-                order.getStatus();
+        order.setStatus(OrderStatus.CANCELLED);
 
-        if (currentStatus ==
-                OrderStatus.CANCELLED) {
-
-            throw new RuntimeException(
-                    "Order is already cancelled"
-            );
-        }
-
-        if (currentStatus ==
-                OrderStatus.DELIVERED) {
-
-            throw new RuntimeException(
-                    "Delivered order cannot be cancelled"
-            );
-        }
-
-        if (currentStatus ==
-                OrderStatus.OUT_FOR_DELIVERY) {
-
-            throw new RuntimeException(
-                    "Out for delivery order cannot be cancelled"
-            );
-        }
-
-        restoreStock(
-                order
-        );
-
-        order.setStatus(
-                OrderStatus.CANCELLED
-        );
-        if (reason != null && !reason.trim().isEmpty()) {
+        if (reason != null && !reason.trim().isEmpty())
             order.setCancellationReason(reason.trim());
-        }
 
-        Order cancelledOrder =
-                orderRepository.save(
-                        order
-                );
-
-        return convertToResponse(
-                cancelledOrder
-        );
+        return convertToResponse(orderRepository.save(order));
     }
+
+    // ==================== UPDATE CANCELLATION REASON ====================
 
     @Override
     @Transactional
-    public OrderResponse updateCancellationReason(UUID orderId, String reason) {
-        if (reason == null || reason.trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reason cannot be empty");
-        }
+    public OrderResponse updateCancellationReason(
+            UUID orderId,
+            String reason) {
+
+        if (reason == null || reason.trim().isEmpty())
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Reason cannot be empty");
+
         User customer = getLoggedInCustomer();
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Order not found"
-                ));
-        if (!order.getCustomer().getUserId().equals(customer.getUserId())) {
+                        "Order not found"));
+
+        if (order.getCustomer() == null ||
+                !order.getCustomer().getUserId()
+                        .equals(customer.getUserId()))
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "You are not authorized to update this order"
-            );
-        }
-        if (order.getStatus() != OrderStatus.CANCELLED) {
+                    "You are not authorized to update this order");
+
+        if (order.getStatus() != OrderStatus.CANCELLED)
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Can only update reason for cancelled orders"
-            );
-        }
+                    "Can only update reason for cancelled orders");
+
         order.setCancellationReason(reason.trim());
-        order = orderRepository.save(order);
-        return convertToResponse(order);
+
+        return convertToResponse(orderRepository.save(order));
     }
 
-
-    // ==========================================================
-    // FARMER CANCEL ORDER
-    // ==========================================================
+    // ==================== FARMER CANCEL ====================
 
     @Override
     @Transactional
-    public FarmerCancelOrderResponse farmerCancelOrder(
-            UUID orderId
-    ) {
+    public FarmerCancelOrderResponse farmerCancelOrder(UUID orderId) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
-            throw new RuntimeException(
-                    "Order id is required"
-            );
+        FarmerProfile farmer = getLoggedInFarmer();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        checkFarmerOwnership(order, farmer);
+
+        boolean anyCancelled = false;
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getFarmer().getId().equals(farmer.getId())) {
+                OrderStatus status = item.getStatus();
+                if (status == OrderStatus.CANCELLED)
+                    continue;
+
+                if (status == OrderStatus.DELIVERED)
+                    throw new RuntimeException("Delivered items cannot be cancelled");
+
+                if (status == OrderStatus.OUT_FOR_DELIVERY)
+                    throw new RuntimeException("Out for delivery items cannot be cancelled");
+
+                restoreItemStock(item);
+                item.setStatus(OrderStatus.CANCELLED);
+                anyCancelled = true;
+            }
         }
 
-        FarmerProfile farmer =
-                getLoggedInFarmer();
+        if (!anyCancelled)
+            throw new RuntimeException("No active items to cancel for this farmer");
 
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
+        updateOrderOverallStatus(order);
 
-        checkFarmerOwnership(
-                order,
-                farmer
-        );
-
-        OrderStatus currentStatus =
-                order.getStatus();
-
-        if (currentStatus ==
-                OrderStatus.CANCELLED) {
-
-            throw new RuntimeException(
-                    "Order is already cancelled"
-            );
-        }
-
-        if (currentStatus ==
-                OrderStatus.DELIVERED) {
-
-            throw new RuntimeException(
-                    "Delivered order cannot be cancelled"
-            );
-        }
-
-        if (currentStatus ==
-                OrderStatus.OUT_FOR_DELIVERY) {
-
-            throw new RuntimeException(
-                    "Out for delivery order cannot be cancelled"
-            );
-        }
-
-        restoreStock(
-                order
-        );
-
-        order.setStatus(
-                OrderStatus.CANCELLED
-        );
-
-        Order cancelledOrder =
-                orderRepository.save(
-                        order
-                );
+        Order cancelledOrder = orderRepository.save(order);
 
         FarmerCancelOrderResponse response =
                 new FarmerCancelOrderResponse();
 
         response.setMessage(
-                "Order cancelled successfully by farmer"
-        );
+                "Order items cancelled successfully by farmer");
 
         response.setResponse(
-                convertToResponse(
-                        cancelledOrder
-                )
-        );
+                convertToResponse(cancelledOrder, farmer));
 
         return response;
     }
 
-
-    // ==========================================================
-    // UPDATE PAYMENT
-    // ==========================================================
+    // ==================== PAYMENT ====================
 
     @Override
     @Transactional
     public OrderResponse updatePayment(
             UUID orderId,
-            PaymentRequest request
-    ) {
+            PaymentRequest request) {
 
-        if (orderId == null) {
+        if (orderId == null)
+            throw new RuntimeException("Order id is required");
 
+        if (request == null)
             throw new RuntimeException(
-                    "Order id is required"
-            );
-        }
+                    "Payment request cannot be null");
 
-        if (request == null) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        if (request.getPaymentMethod() == null)
             throw new RuntimeException(
-                    "Payment request cannot be null"
-            );
-        }
+                    "Payment method is required");
 
-        Order order =
-                orderRepository
-                        .findById(orderId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Order not found"
-                                )
-                        );
+        order.setPaymentMethod(request.getPaymentMethod());
 
-        if (request.getPaymentMethod() == null) {
-
-            throw new RuntimeException(
-                    "Payment method is required"
-            );
-        }
-
-        order.setPaymentMethod(
-                request.getPaymentMethod()
+        order.setPaymentStatus(
+                request.getPaymentStatus() != null
+                        ? request.getPaymentStatus()
+                        : PaymentStatus.PENDING
         );
 
-        if (request.getPaymentStatus() != null) {
+        order.setTransactionId(request.getTransactionId());
 
-            order.setPaymentStatus(
-                    request.getPaymentStatus()
-            );
-
-        } else {
-
-            order.setPaymentStatus(
-                    PaymentStatus.PENDING
-            );
-        }
-
-        order.setTransactionId(
-                request.getTransactionId()
-        );
-
-        Order updatedOrder =
-                orderRepository.save(
-                        order
-                );
-
-        return convertToResponse(
-                updatedOrder
-        );
+        return convertToResponse(orderRepository.save(order));
     }
 
-
-    // ==========================================================
-    // FARMER DASHBOARD SUMMARY
-    // ==========================================================
+    // ==================== FARMER DASHBOARD ====================
 
     @Override
     @Transactional(readOnly = true)
-    public FarmerDashboardSummaryResponse
-    getFarmerDashboardSummary() {
-
-        return null;
-    }
-
-
-    // ==========================================================
-    // CUSTOMER ORDER SUMMARY
-    // ==========================================================
-
-    @Override
-    @Transactional(readOnly = true)
-    public CustomerOrderSummaryResponse
-    getCustomerOrderSummary() {
-
-        User customer =
-                getLoggedInCustomer();
+    public FarmerDashboardSummaryResponse getFarmerDashboardSummary() {
+        FarmerProfile farmer = getLoggedInFarmer();
+        UUID farmerId = farmer.getId();
 
         long totalOrders =
-                orderRepository.countByCustomer(
-                        customer
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_Id(farmerId);
+
+        long newOrders =
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.PENDING);
+
+        long preparing =
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.CONFIRMED);
+
+        long ready =
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.PROCESSING);
+
+        long outForDelivery =
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.OUT_FOR_DELIVERY);
+
+        long delivered =
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.DELIVERED);
+
+        BigDecimal totalSales =
+                orderRepository.getTotalSalesByFarmer(farmerId);
+
+        if (totalSales == null)
+            totalSales = BigDecimal.ZERO;
+
+        FarmerDashboardSummaryResponse response =
+                new FarmerDashboardSummaryResponse();
+
+        response.setTotalOrders(totalOrders);
+        response.setNewOrders(newOrders);
+        response.setPreparing(preparing);
+        response.setReady(ready);
+        response.setOutForDelivery(outForDelivery);
+        response.setDelivered(delivered);
+        response.setTotalSales(totalSales);
+
+        return response;
+    }
+
+    // ==================== CUSTOMER SUMMARY ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public CustomerOrderSummaryResponse getCustomerOrderSummary() {
+
+        User customer = getLoggedInCustomer();
+
+        long totalOrders =
+                orderRepository.countByCustomer(customer);
 
         long delivered =
                 orderRepository.countByCustomerAndStatus(
-                        customer,
-                        OrderStatus.DELIVERED
-                );
+                        customer, OrderStatus.DELIVERED);
 
         long cancelled =
                 orderRepository.countByCustomerAndStatus(
-                        customer,
-                        OrderStatus.CANCELLED
-                );
+                        customer, OrderStatus.CANCELLED);
 
         long activeOrders =
-                totalOrders
-                        - delivered
-                        - cancelled;
+                totalOrders - delivered - cancelled;
 
         BigDecimal totalSpending =
-                orderRepository.getTotalAmountByCustomer(
-                        customer
-                );
+                orderRepository.getTotalAmountByCustomer(customer);
 
-        if (totalSpending == null) {
-
-            totalSpending =
-                    BigDecimal.ZERO;
-        }
+        if (totalSpending == null)
+            totalSpending = BigDecimal.ZERO;
 
         CustomerOrderSummaryResponse response =
                 new CustomerOrderSummaryResponse();
 
-        response.setTotalOrders(
-                totalOrders
-        );
-
-        response.setActiveOrders(
-                activeOrders
-        );
-
-        response.setDelivered(
-                delivered
-        );
-
-        response.setCancelled(
-                cancelled
-        );
-
-        response.setTotalSpending(
-                totalSpending
-        );
+        response.setTotalOrders(totalOrders);
+        response.setActiveOrders(activeOrders);
+        response.setDelivered(delivered);
+        response.setCancelled(cancelled);
+        response.setTotalSpending(totalSpending);
 
         return response;
     }
 
-
-    // ==========================================================
-    // CUSTOMER MY ORDERS
-    // ==========================================================
+    // ==================== CUSTOMER ACTIVE ORDERS ====================
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse>
-    getCustomerMyOrders() {
+    public List<OrderResponse> getCustomerMyOrders() {
 
-        User customer =
-                getLoggedInCustomer();
+        User customer = getLoggedInCustomer();
 
-        List<OrderStatus> activeStatuses =
-                List.of(
-                        OrderStatus.PENDING,
-                        OrderStatus.CONFIRMED,
-                        OrderStatus.PROCESSING,
-                        OrderStatus.OUT_FOR_DELIVERY
-                );
+        List<OrderStatus> statuses = List.of(
+                OrderStatus.PENDING,
+                OrderStatus.CONFIRMED,
+                OrderStatus.PROCESSING,
+                OrderStatus.OUT_FOR_DELIVERY
+        );
 
         List<Order> orders =
                 orderRepository.findByCustomerAndStatusIn(
-                        customer,
-                        activeStatuses
-                );
+                        customer, statuses);
 
-        List<OrderResponse> responses =
-                new ArrayList<>();
+        List<OrderResponse> responses = new ArrayList<>();
 
-        for (Order order :
-                orders) {
-
-            responses.add(
-                    convertToResponse(order)
-            );
-        }
+        for (Order order : orders)
+            responses.add(convertToResponse(order));
 
         return responses;
     }
 
-
-    // ==========================================================
-    // CUSTOMER ORDER HISTORY
-    // ==========================================================
+    // ==================== CUSTOMER HISTORY ====================
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse>
-    getCustomerOrderHistory() {
+    public List<OrderResponse> getCustomerOrderHistory() {
 
-        User customer =
-                getLoggedInCustomer();
+        User customer = getLoggedInCustomer();
 
-        List<OrderStatus> historyStatuses =
-                List.of(
-                        OrderStatus.DELIVERED,
-                        OrderStatus.CANCELLED
-                );
+        List<OrderStatus> statuses = List.of(
+                OrderStatus.DELIVERED,
+                OrderStatus.CANCELLED
+        );
 
         List<Order> orders =
                 orderRepository.findByCustomerAndStatusIn(
-                        customer,
-                        historyStatuses
-                );
+                        customer, statuses);
 
-        List<OrderResponse> responses =
-                new ArrayList<>();
+        List<OrderResponse> responses = new ArrayList<>();
 
-        for (Order order :
-                orders) {
-
-            responses.add(
-                    convertToResponse(order)
-            );
-        }
+        for (Order order : orders)
+            responses.add(convertToResponse(order));
 
         return responses;
     }
 
-
-    // ==========================================================
-    // FARMER ORDER SUMMARY
-    // ==========================================================
+    // ==================== FARMER SUMMARY ====================
 
     @Override
     @Transactional(readOnly = true)
-    public FarmerOrderSummaryResponse
-    getFarmerOrderSummary() {
+    public FarmerOrderSummaryResponse getFarmerOrderSummary() {
 
-        FarmerProfile farmer =
-                getLoggedInFarmer();
-
-        UUID farmerId =
-                farmer.getId();
+        FarmerProfile farmer = getLoggedInFarmer();
+        UUID farmerId = farmer.getId();
 
         long totalOrders =
-                orderRepository.countByFarmer_Id(
-                        farmerId
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_Id(farmerId);
 
         long newOrders =
-                orderRepository.countByFarmer_IdAndStatus(
-                        farmerId,
-                        OrderStatus.PENDING
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.PENDING);
 
         long preparing =
-                orderRepository.countByFarmer_IdAndStatus(
-                        farmerId,
-                        OrderStatus.CONFIRMED
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.CONFIRMED);
 
         long ready =
-                orderRepository.countByFarmer_IdAndStatus(
-                        farmerId,
-                        OrderStatus.PROCESSING
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.PROCESSING);
 
         long outForDelivery =
-                orderRepository.countByFarmer_IdAndStatus(
-                        farmerId,
-                        OrderStatus.OUT_FOR_DELIVERY
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.OUT_FOR_DELIVERY);
 
         long delivered =
-                orderRepository.countByFarmer_IdAndStatus(
-                        farmerId,
-                        OrderStatus.DELIVERED
-                );
+                orderRepository.countDistinctByOrderItemsFarmer_IdAndStatus(
+                        farmerId, OrderStatus.DELIVERED);
 
         BigDecimal totalSales =
-                orderRepository.getTotalSalesByFarmer(
-                        farmerId
-                );
+                orderRepository.getTotalSalesByFarmer(farmerId);
 
-        if (totalSales == null) {
-
-            totalSales =
-                    BigDecimal.ZERO;
-        }
+        if (totalSales == null)
+            totalSales = BigDecimal.ZERO;
 
         FarmerOrderSummaryResponse response =
                 new FarmerOrderSummaryResponse();
 
-        response.setTotalOrders(
-                totalOrders
-        );
-
-        response.setNewOrders(
-                newOrders
-        );
-
-        response.setPreparing(
-                preparing
-        );
-
-        response.setReady(
-                ready
-        );
-
-        response.setOutForDelivery(
-                outForDelivery
-        );
-
-        response.setDelivered(
-                delivered
-        );
-
-        response.setTotalSales(
-                totalSales
-        );
+        response.setTotalOrders(totalOrders);
+        response.setNewOrders(newOrders);
+        response.setPreparing(preparing);
+        response.setReady(ready);
+        response.setOutForDelivery(outForDelivery);
+        response.setDelivered(delivered);
+        response.setTotalSales(totalSales);
 
         return response;
     }
 
-
-    // ==========================================================
-    // GENERAL ORDER SUMMARY
-    // ==========================================================
+    // ==================== GENERAL SUMMARY ====================
 
     @Override
     @Transactional(readOnly = true)
-    public GeneralOrderSummaryResponse
-    getGeneralOrderSummary() {
+    public GeneralOrderSummaryResponse getGeneralOrderSummary() {
 
-        long totalOrders =
-                orderRepository.count();
+        long totalOrders = orderRepository.count();
 
         long pendingOrders =
-                orderRepository.countByStatus(
-                        OrderStatus.PENDING
-                );
+                orderRepository.countByStatus(OrderStatus.PENDING);
 
         long confirmedOrders =
-                orderRepository.countByStatus(
-                        OrderStatus.CONFIRMED
-                );
+                orderRepository.countByStatus(OrderStatus.CONFIRMED);
 
         long deliveredOrders =
-                orderRepository.countByStatus(
-                        OrderStatus.DELIVERED
-                );
+                orderRepository.countByStatus(OrderStatus.DELIVERED);
 
         long cancelledOrders =
-                orderRepository.countByStatus(
-                        OrderStatus.CANCELLED
-                );
+                orderRepository.countByStatus(OrderStatus.CANCELLED);
 
         BigDecimal totalAmount =
                 orderRepository.getTotalOrderAmount();
 
-        if (totalAmount == null) {
-
-            totalAmount =
-                    BigDecimal.ZERO;
-        }
+        if (totalAmount == null)
+            totalAmount = BigDecimal.ZERO;
 
         GeneralOrderSummaryResponse response =
                 new GeneralOrderSummaryResponse();
 
-        response.setTotalOrders(
-                totalOrders
-        );
-
-        response.setPendingOrders(
-                pendingOrders
-        );
-
-        response.setConfirmedOrders(
-                confirmedOrders
-        );
-
-        response.setDeliveredOrders(
-                deliveredOrders
-        );
-
-        response.setCancelledOrders(
-                cancelledOrders
-        );
-
-        response.setTotalAmount(
-                totalAmount
-        );
+        response.setTotalOrders(totalOrders);
+        response.setPendingOrders(pendingOrders);
+        response.setConfirmedOrders(confirmedOrders);
+        response.setDeliveredOrders(deliveredOrders);
+        response.setCancelledOrders(cancelledOrders);
+        response.setTotalAmount(totalAmount);
 
         return response;
     }
 
-
-    // ==========================================================
-    // LOGGED-IN CUSTOMER
-    // ==========================================================
+    // ==================== CUSTOMER ====================
 
     private User getLoggedInCustomer() {
 
@@ -1379,28 +782,18 @@ public class OrderServiceImpl implements OrderService {
 
         if (authentication == null ||
                 authentication.getName() == null ||
-                authentication.getName().isBlank()) {
-
+                authentication.getName().isBlank())
             throw new RuntimeException(
-                    "Customer is not authenticated"
-            );
-        }
+                    "Customer is not authenticated");
 
         return userRepository
-                .findByEmail(
-                        authentication.getName()
-                )
+                .findByEmail(authentication.getName())
                 .orElseThrow(() ->
                         new RuntimeException(
-                                "Customer not found"
-                        )
-                );
+                                "Customer not found"));
     }
 
-
-    // ==========================================================
-    // LOGGED-IN FARMER
-    // ==========================================================
+    // ==================== FARMER ====================
 
     private FarmerProfile getLoggedInFarmer() {
 
@@ -1411,103 +804,45 @@ public class OrderServiceImpl implements OrderService {
 
         if (authentication == null ||
                 authentication.getName() == null ||
-                authentication.getName().isBlank()) {
-
+                authentication.getName().isBlank())
             throw new RuntimeException(
-                    "Farmer is not authenticated"
-            );
-        }
+                    "Farmer is not authenticated");
 
         return farmerProfileRepository
-                .findByUser_Email(
-                        authentication.getName()
-                )
+                .findByUser_Email(authentication.getName())
                 .orElseThrow(() ->
                         new RuntimeException(
-                                "Farmer profile not found"
-                        )
-                );
+                                "Farmer profile not found"));
     }
 
-
-    // ==========================================================
-    // CHECK FARMER OWNERSHIP
-    // ==========================================================
+    // ==================== FARMER OWNERSHIP ====================
 
     private void checkFarmerOwnership(
             Order order,
-            FarmerProfile farmer
-    ) {
+            FarmerProfile farmer) {
 
-        if (order == null) {
+        if (order == null)
+            throw new RuntimeException("Order not found");
 
+        if (farmer == null)
+            throw new RuntimeException("Farmer not found");
+
+        boolean hasFarmerItem = order.getOrderItems().stream()
+                .anyMatch(item -> item.getFarmer().getId().equals(farmer.getId()));
+
+        if (!hasFarmerItem)
             throw new RuntimeException(
-                    "Order not found"
-            );
-        }
-
-        if (farmer == null) {
-
-            throw new RuntimeException(
-                    "Farmer not found"
-            );
-        }
-
-        if (order.getFarmer() == null) {
-
-            throw new RuntimeException(
-                    "Farmer is not assigned to this order"
-            );
-        }
-
-        if (!order.getFarmer()
-                .getId()
-                .equals(
-                        farmer.getId()
-                )) {
-
-            throw new RuntimeException(
-                    "You are not authorized to update this order"
-            );
-        }
+                    "You are not authorized to update this order");
     }
 
+    // ==================== RESTORE STOCK ====================
 
-    // ==========================================================
-    // RESTORE STOCK
-    // ==========================================================
-
-    private void restoreStock(
-            Order order
-    ) {
-
-        if (order == null) {
-
+    private void restoreItemStock(OrderItem item) {
+        if (item.getStatus() == OrderStatus.CANCELLED) {
             return;
         }
-
-        if (order.getOrderItems() == null ||
-                order.getOrderItems().isEmpty()) {
-
-            return;
-        }
-
-        for (OrderItem item :
-                order.getOrderItems()) {
-
-            if (item == null) {
-
-                continue;
-            }
-
-            Product product =
-                    item.getProduct();
-
-            if (product == null) {
-
-                continue;
-            }
-
+        Product product = item.getProduct();
+        if (product != null) {
             double currentQuantity =
                     product.getQuantity() == null
                             ? 0
@@ -1516,160 +851,133 @@ public class OrderServiceImpl implements OrderService {
             double orderedQuantity =
                     item.getQuantity() == null
                             ? 0
-                            : item.getQuantity()
-                            .doubleValue();
+                            : item.getQuantity().doubleValue();
 
-            if (orderedQuantity <= 0) {
-
-                continue;
+            if (orderedQuantity > 0) {
+                product.setQuantity(currentQuantity + orderedQuantity);
+                productRepository.save(product);
             }
-
-            product.setQuantity(
-                    currentQuantity
-                            + orderedQuantity
-            );
-
-            productRepository.save(
-                    product
-            );
         }
     }
 
+    private void restoreStock(Order order) {
+        if (order == null ||
+                order.getOrderItems() == null ||
+                order.getOrderItems().isEmpty())
+            return;
 
-    // ==========================================================
-    // ENTITY -> RESPONSE
-    // ==========================================================
+        for (OrderItem item : order.getOrderItems()) {
+            restoreItemStock(item);
+        }
+    }
 
-    private OrderResponse convertToResponse(
-            Order order
-    ) {
+    // ==================== ORDER STATUS DERIVATION ====================
 
-        OrderResponse response =
-                new OrderResponse();
+    private void updateOrderOverallStatus(Order order) {
+        if (order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+            order.setStatus(OrderStatus.PENDING);
+            return;
+        }
 
-        // ------------------------------------------------------
-        // ORDER DETAILS
-        // ------------------------------------------------------
+        boolean allCancelled = true;
+        boolean allDelivered = true;
+        boolean allDeliveredOrCancelled = true;
+        boolean allConfirmedOrBeyond = true;
+        boolean allProcessingOrBeyond = true;
+        boolean allOutForDeliveryOrBeyond = true;
 
-        response.setOrderId(
-                order.getOrderId()
-        );
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getStatus() != OrderStatus.CANCELLED) {
+                allCancelled = false;
+            }
+            if (item.getStatus() != OrderStatus.DELIVERED) {
+                allDelivered = false;
+            }
+            if (item.getStatus() != OrderStatus.DELIVERED && item.getStatus() != OrderStatus.CANCELLED) {
+                allDeliveredOrCancelled = false;
+            }
+            if (item.getStatus() == OrderStatus.PENDING || item.getStatus() == OrderStatus.CANCELLED) {
+                if (item.getStatus() == OrderStatus.PENDING) {
+                    allConfirmedOrBeyond = false;
+                    allProcessingOrBeyond = false;
+                    allOutForDeliveryOrBeyond = false;
+                }
+            }
+            if (item.getStatus() == OrderStatus.CONFIRMED) {
+                allProcessingOrBeyond = false;
+                allOutForDeliveryOrBeyond = false;
+            }
+            if (item.getStatus() == OrderStatus.PROCESSING) {
+                allOutForDeliveryOrBeyond = false;
+            }
+        }
 
-        response.setOrderNumber(
-                order.getOrderNumber()
-        );
+        if (allCancelled) {
+            order.setStatus(OrderStatus.CANCELLED);
+        } else if (allDelivered || allDeliveredOrCancelled) {
+            order.setStatus(OrderStatus.DELIVERED);
+        } else if (allOutForDeliveryOrBeyond) {
+            order.setStatus(OrderStatus.OUT_FOR_DELIVERY);
+        } else if (allProcessingOrBeyond) {
+            order.setStatus(OrderStatus.PROCESSING);
+        } else if (allConfirmedOrBeyond) {
+            order.setStatus(OrderStatus.CONFIRMED);
+        } else {
+            order.setStatus(OrderStatus.PENDING);
+        }
+    }
 
-        // ------------------------------------------------------
-        // CUSTOMER
-        // ------------------------------------------------------
+    // ==================== RESPONSE ====================
 
-        if (order.getCustomer() != null) {
+    private OrderResponse convertToResponse(Order order) {
+        return convertToResponse(order, null);
+    }
 
+    private OrderResponse convertToResponse(Order order, FarmerProfile filterFarmer) {
+
+        OrderResponse response = new OrderResponse();
+
+        response.setOrderId(order.getOrderId());
+        response.setOrderNumber(order.getOrderNumber());
+
+        if (order.getCustomer() != null)
             response.setCustomerId(
-                    order.getCustomer()
-                            .getUserId()
-            );
-        }
+                    order.getCustomer().getUserId());
 
-        // ------------------------------------------------------
-        // FARMER
-        // ------------------------------------------------------
+        response.setCustomerName(order.getCustomerName());
+        response.setCustomerMobile(order.getCustomerMobile());
 
-        if (order.getFarmer() != null) {
+        response.setDeliveryAddress(order.getDeliveryAddress());
+        response.setVillage(order.getVillage());
+        response.setPostalCode(order.getPostalCode());
+        response.setState(order.getState());
 
-            response.setFarmerId(
-                    order.getFarmer()
-                            .getId()
-            );
-        }
+        response.setStatus(order.getStatus());
 
-        // ------------------------------------------------------
-        // CUSTOMER DETAILS
-        // ------------------------------------------------------
-
-        response.setCustomerName(
-                order.getCustomerName()
-        );
-
-        response.setCustomerMobile(
-                order.getCustomerMobile()
-        );
-
-        // ------------------------------------------------------
-        // DELIVERY DETAILS
-        // ------------------------------------------------------
-
-        response.setDeliveryAddress(
-                order.getDeliveryAddress()
-        );
-
-        response.setVillage(
-                order.getVillage()
-        );
-
-        response.setPostalCode(
-                order.getPostalCode()
-        );
-
-        response.setState(
-                order.getState()
-        );
-
-        // ------------------------------------------------------
-        // ORDER DETAILS
-        // ------------------------------------------------------
-
-        response.setTotalAmount(
-                order.getTotalAmount()
-        );
-
-        response.setStatus(
-                order.getStatus()
-        );
-
-        // ------------------------------------------------------
-        // PAYMENT DETAILS
-        // ------------------------------------------------------
-
-        response.setPaymentStatus(
-                order.getPaymentStatus()
-        );
-
-        response.setPaymentMethod(
-                order.getPaymentMethod()
-        );
-
-        response.setTransactionId(
-                order.getTransactionId()
-        );
+        response.setPaymentStatus(order.getPaymentStatus());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setTransactionId(order.getTransactionId());
 
         response.setCancellationReason(
-                order.getCancellationReason()
-        );
+                order.getCancellationReason());
 
-        // ------------------------------------------------------
-        // DATE / TIME
-        // ------------------------------------------------------
-
-        response.setCreatedOn(
-                order.getCreatedOn()
-        );
-
-        response.setUpdatedOn(
-                order.getUpdatedOn()
-        );
-
-        // ------------------------------------------------------
-        // ORDER ITEMS
-        // ------------------------------------------------------
+        response.setCreatedOn(order.getCreatedOn());
+        response.setUpdatedOn(order.getUpdatedOn());
 
         List<OrderItemResponse> itemResponses =
                 new ArrayList<>();
 
+        BigDecimal filterTotalAmount = BigDecimal.ZERO;
+        UUID commonFarmerId = null;
+        boolean singleFarmer = true;
+
         if (order.getOrderItems() != null) {
 
-            for (OrderItem item :
-                    order.getOrderItems()) {
+            for (OrderItem item : order.getOrderItems()) {
+
+                if (filterFarmer != null && !item.getFarmer().getId().equals(filterFarmer.getId())) {
+                    continue;
+                }
 
                 OrderItemResponse itemResponse =
                         new OrderItemResponse();
@@ -1677,43 +985,58 @@ public class OrderServiceImpl implements OrderService {
                 if (item.getProduct() != null) {
 
                     itemResponse.setProductId(
-                            item.getProduct()
-                                    .getProductId()
-                    );
+                            item.getProduct().getProductId());
+
                     itemResponse.setImageUrl(
-                            item.getProduct().getProductPhoto()
-                    );
+                            item.getProduct().getProductPhoto());
                 }
 
-                itemResponse.setProductName(
-                        item.getProductName()
-                );
+                itemResponse.setProductName(item.getProductName());
+                itemResponse.setQuantity(item.getQuantity());
+                itemResponse.setUnit(item.getUnit());
+                itemResponse.setPrice(item.getPrice());
+                itemResponse.setSubtotal(item.getSubtotal());
+                itemResponse.setStatus(item.getStatus());
 
-                itemResponse.setQuantity(
-                        item.getQuantity()
-                );
+                if (item.getFarmer() != null) {
+                    itemResponse.setFarmerId(item.getFarmer().getId());
+                    if (item.getFarmer().getUser() != null && item.getFarmer().getUser().getName() != null) {
+                        itemResponse.setFarmerName(item.getFarmer().getUser().getName());
+                    } else {
+                        // Explicitly fetch to resolve any Hibernate Proxy initialization issues with the lazy relation
+                        FarmerProfile explicitFarmer = farmerProfileRepository.findById(item.getFarmer().getId()).orElse(null);
+                        if (explicitFarmer != null && explicitFarmer.getUser() != null && explicitFarmer.getUser().getName() != null) {
+                            itemResponse.setFarmerName(explicitFarmer.getUser().getName());
+                        } else {
+                            itemResponse.setFarmerName(item.getFarmer().getFarmName());
+                        }
+                    }
 
-                itemResponse.setUnit(
-                        item.getUnit()
-                );
+                    if (commonFarmerId == null) {
+                        commonFarmerId = item.getFarmer().getId();
+                    } else if (!commonFarmerId.equals(item.getFarmer().getId())) {
+                        singleFarmer = false;
+                    }
+                }
 
-                itemResponse.setPrice(
-                        item.getPrice()
-                );
-
-                itemResponse.setSubtotal(
-                        item.getSubtotal()
-                );
-
-                itemResponses.add(
-                        itemResponse
-                );
+                itemResponses.add(itemResponse);
+                filterTotalAmount = filterTotalAmount.add(item.getSubtotal());
             }
         }
 
-        response.setItems(
-                itemResponses
-        );
+        response.setItems(itemResponses);
+
+        if (filterFarmer != null) {
+            response.setTotalAmount(filterTotalAmount);
+            response.setFarmerId(filterFarmer.getId());
+        } else {
+            response.setTotalAmount(order.getTotalAmount());
+            if (singleFarmer && commonFarmerId != null) {
+                response.setFarmerId(commonFarmerId);
+            } else {
+                response.setFarmerId(null);
+            }
+        }
 
         return response;
     }

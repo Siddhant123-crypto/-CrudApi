@@ -66,6 +66,7 @@ public class MapperBuild {
         response.setQuantity(product.getQuantity());
         response.setUnit(product.getUnit());
         response.setDescription(product.getDescription());
+        response.setHarvestDate(product.getHarvestDate());
 
         // -----------------------------------------------
         // IMAGE
@@ -87,6 +88,8 @@ public class MapperBuild {
         response.setIsActive(product.getIsActive());
         response.setIsDelete(product.getIsDelete());
         response.setStatus(product.getStatus());
+        response.setAverageRating(product.getAverageRating());
+        response.setReviewCount(product.getReviewCount());
 
         return response;
     }

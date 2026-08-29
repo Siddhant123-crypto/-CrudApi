@@ -36,4 +36,7 @@ public class Product {
     private Boolean isActive;
     private Boolean isDelete;
     private String status;
+    private String harvestDate;
+    private Double averageRating = 0.0;
+    private Integer reviewCount = 0;
 }

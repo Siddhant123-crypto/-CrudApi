@@ -199,7 +199,9 @@ public class UserServiceImpl implements UserService {
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
-            user.setPassword(request.getPassword());
+            if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+                user.setPassword(request.getPassword());
+            }
             user.setState(request.getState());
             user.setVillage(request.getVillage());
             user.setAddress(request.getAddress());

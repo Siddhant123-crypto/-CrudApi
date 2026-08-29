@@ -27,9 +27,6 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "farmer_id", nullable = false)
-    private FarmerProfile farmer;
     @Column(nullable = false)
     private String customerName;
     @Column(nullable = false)

@@ -20,6 +20,7 @@ public class ProductResponse {
     private ProductUnit unit;
     private String description;
     private String productPhoto;
+    private String harvestDate;
     // Optional product video
     private String productVideo;
     private Boolean isActive;
@@ -29,4 +30,6 @@ public class ProductResponse {
     private LocalDateTime createdOn;
     private String updatedBy;
     private LocalDateTime updatedOn;
+    private Double averageRating;
+    private Integer reviewCount;
 }

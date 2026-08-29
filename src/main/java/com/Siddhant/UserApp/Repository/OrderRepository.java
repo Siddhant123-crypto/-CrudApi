@@ -23,11 +23,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     // FARMER ORDERS
     // ==========================================================
 
-    List<Order> findByFarmer_Id(UUID farmerId);
+    @Query("SELECT DISTINCT o FROM Order o JOIN o.orderItems oi WHERE oi.farmer.id = :farmerId")
+    List<Order> findDistinctByOrderItemsFarmer_Id(@Param("farmerId") UUID farmerId);
 
-    List<Order> findByFarmer_IdAndStatus(
-            UUID farmerId,
-            OrderStatus status
+    @Query("SELECT DISTINCT o FROM Order o JOIN o.orderItems oi WHERE oi.farmer.id = :farmerId AND oi.status = :status")
+    List<Order> findDistinctByOrderItemsFarmer_IdAndStatus(
+            @Param("farmerId") UUID farmerId,
+            @Param("status") OrderStatus status
     );
 
     // ==========================================================
@@ -54,18 +56,20 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     // FARMER SUMMARY
     // ==========================================================
 
-    long countByFarmer_Id(UUID farmerId);
+    @Query("SELECT COUNT(DISTINCT o) FROM Order o JOIN o.orderItems oi WHERE oi.farmer.id = :farmerId")
+    long countDistinctByOrderItemsFarmer_Id(@Param("farmerId") UUID farmerId);
 
-    long countByFarmer_IdAndStatus(
-            UUID farmerId,
-            OrderStatus status
+    @Query("SELECT COUNT(DISTINCT o) FROM Order o JOIN o.orderItems oi WHERE oi.farmer.id = :farmerId AND oi.status = :status")
+    long countDistinctByOrderItemsFarmer_IdAndStatus(
+            @Param("farmerId") UUID farmerId,
+            @Param("status") OrderStatus status
     );
 
     @Query("""
-            SELECT COALESCE(SUM(o.totalAmount), 0)
-            FROM Order o
-            WHERE o.farmer.id = :farmerId
-            AND o.status = com.Siddhant.UserApp.enums.OrderStatus.DELIVERED
+            SELECT COALESCE(SUM(oi.subtotal), 0)
+            FROM OrderItem oi
+            WHERE oi.farmer.id = :farmerId
+            AND oi.status = com.Siddhant.UserApp.enums.OrderStatus.DELIVERED
             """)
     BigDecimal getTotalSalesByFarmer(
             @Param("farmerId") UUID farmerId
