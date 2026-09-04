@@ -12,12 +12,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import com.Siddhant.UserApp.Repository.UserRepository;
+import com.Siddhant.UserApp.Repository.AdminRepository;
 import java.util.Collections;
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository, AdminRepository adminRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
     }
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -37,7 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/user/image/")
                 || path.startsWith("/user/getPhoto/")
                 || path.startsWith("/product/image/")
-                || path.startsWith("/auth/")) {
+                || path.startsWith("/auth/")
+                || path.equals("/admin/login")) {
             System.out.println("PUBLIC API - JWT FILTER SKIPPED");
             filterChain.doFilter(request, response);
             return;
@@ -61,20 +70,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // =========================
             String username = jwtService.extractUsername(token);
             String role = jwtService.extractRole(token);
+            
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 // =========================
                 // VALIDATE TOKEN
                 // =========================
-                if (jwtService.validateToken(token, username)) {SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
-                    UsernamePasswordAuthenticationToken
-                            authToken = new UsernamePasswordAuthenticationToken(
-                                    username, null,
-                                    Collections.singletonList(authority));
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println("JWT Authentication Successful");
-                    System.out.println("Username : " + username);
-                    System.out.println("Role : " + role);
+                if (jwtService.validateToken(token, username)) {
+                    boolean isValidUser = false;
+                    
+                    if ("ADMIN".equalsIgnoreCase(role)) {
+                        isValidUser = adminRepository.findByEmail(username)
+                            .map(admin -> admin.getIsActive() != null && admin.getIsActive() && (admin.getIsDelete() == null || !admin.getIsDelete()))
+                            .orElse(false);
+                    } else if ("CUSTOMER".equalsIgnoreCase(role) || "FARMER".equalsIgnoreCase(role)) {
+                        isValidUser = userRepository.findByEmail(username)
+                            .map(user -> user.getIsActive() != null && user.getIsActive() && (user.getIsDelete() == null || !user.getIsDelete()))
+                            .orElse(false);
+                    }
+                    
+                    if (isValidUser) {
+                        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                username, null, Collections.singletonList(authority));
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        
+                        System.out.println("JWT Authentication Successful");
+                        System.out.println("Username : " + username);
+                        System.out.println("Role : " + role);
+                    } else {
+                        System.out.println("JWT Authentication Failed: User/Admin not found or inactive");
+                    }
                 }
             }
         } catch (Exception e) {

@@ -1,0 +1,30 @@
+package com.Siddhant.UserApp.Service;
+import com.Siddhant.UserApp.dto.admin.AdminFarmGalleryResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmerResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmerSalesResponse;
+import java.util.List;
+import java.util.UUID;
+public interface AdminFarmerService {
+    List<AdminFarmerResponse> getAllFarmers();
+    AdminFarmerResponse getFarmerById(UUID farmerId);
+    List<AdminFarmerResponse> getPendingFarmers();
+    List<AdminFarmerResponse> getVerifiedFarmers();
+    List<AdminFarmerResponse> getBlockedFarmers();
+    AdminFarmerResponse blockFarmer(UUID farmerId);
+    AdminFarmerResponse unblockFarmer(UUID farmerId);
+    AdminFarmerResponse verifyFarmer(UUID farmerId);
+    AdminFarmerResponse deleteFarmer(UUID farmerId);
+    List<AdminFarmerResponse> searchFarmers(String keyword);
+    List<AdminFarmerResponse> filterFarmersByState(String state);
+    AdminFarmerSalesResponse getFarmerSales(UUID farmerId);
+    AdminFarmerResponse approveFarmer(UUID farmerId);
+    AdminFarmerResponse rejectFarmer(UUID farmerId);
+    AdminFarmerResponse unverifyFarmer(UUID farmerId);
+    AdminFarmerResponse activateFarmer(UUID farmerId);
+    AdminFarmerResponse deactivateFarmer(UUID farmerId);
+    AdminFarmerResponse getFarmDetails(UUID farmerId);
+    List<AdminFarmGalleryResponse> getFarmGallery(UUID farmerId);
+    AdminFarmerResponse requestAdditionalInfo(UUID farmerId, String message);
+    AdminFarmVerificationResponse getFarmVerification(UUID farmerId);
+}

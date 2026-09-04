@@ -44,5 +44,4 @@ public class User {
     private String createdBy;
     private String updatedBy;
     private LocalDateTime lastLogin;
-
 }

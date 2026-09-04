@@ -11,10 +11,25 @@ public class SecurityConfig {
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {http.csrf(csrf -> csrf.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/user/register", "/user/login", "/user/google-login", "/newuser/google-login", "/newuser/login", "/farmer/save", "/farmer/login", "/farmer/state/**", "/farmer/nearby", "/user/image/**", "/user/getPhoto/**", "/product/image/**", "/product/video/**", "/auth/**"
-                        ).permitAll().anyRequest().authenticated()
+                    .requestMatchers(
+                            "/user/register", "/user/login", "/user/google-login",
+                            "/newuser/google-login", "/newuser/login",
+                            "/farmer/save", "/farmer/login", "/farmer/state/**", "/farmer/nearby",
+                            "/user/image/**", "/user/getPhoto/**",
+                            "/product/image/**", "/product/video/**",
+                            "/auth/**",
+                            "/uploads/**",  // Allow public access to all uploaded media files (farm images, videos, etc.)
+                            "/admin/login"  // Admin login is public
+                        ).permitAll()
+                    .requestMatchers("/admin/**").hasRole("ADMIN")
+                    .anyRequest().authenticated()
             ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
