@@ -1,5 +1,2 @@
 package com.Siddhant.UserApp.Entity;
-public enum Role {
-    CUSTOMER,
-    FARMER
-}
+public enum Role { CUSTOMER,FARMER,ADMIN}

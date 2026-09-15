@@ -17,10 +17,13 @@ public class AdminProductResponse {
     private String description;
     private String productPhoto;
     private String productVideo;
+    private Boolean farmerActive;
+    private String farmerInactiveReason;
     private Boolean isActive;
     private Boolean isDelete;
     private String status;
     private String harvestDate;
     private Double averageRating;
     private Integer reviewCount;
+    private UUID farmerUserId;
 }

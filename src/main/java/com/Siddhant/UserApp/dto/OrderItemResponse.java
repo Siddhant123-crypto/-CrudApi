@@ -14,5 +14,8 @@ public class OrderItemResponse {
     private BigDecimal subtotal;
     private OrderStatus status;
     private UUID farmerId;
+    private UUID farmerUserId;
     private String farmerName;
+    private String farmerMobile;
+    private String harvestDate;
 }

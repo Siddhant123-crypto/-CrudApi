@@ -35,4 +35,5 @@ public interface ProductService {
     String uploadPhoto(UUID productId, MultipartFile photo);
     // Upload/update product video separately
     String uploadVideo(UUID productId, MultipartFile video);
+
 }

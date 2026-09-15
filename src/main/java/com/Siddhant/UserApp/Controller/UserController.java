@@ -25,6 +25,7 @@ public class UserController {
     public RegisterResponse register(
             @RequestPart("data") String data,
             @RequestPart(value = "photo", required = false) MultipartFile photo) throws java.io.IOException {
+        
         log.debug("DATA RECEIVED FROM MOBILE = {}", data);
         RegisterData request = new com.fasterxml.jackson.databind.ObjectMapper().readValue(data, RegisterData.class);
         return userService.register(request, photo);

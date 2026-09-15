@@ -12,7 +12,7 @@ public interface AdminCustomerService {
     AdminCustomerResponse getCustomerById(UUID customerId);
     List<AdminCustomerResponse> getActiveCustomers();
     List<AdminCustomerResponse> getBlockedCustomers();
-    AdminCustomerResponse blockCustomer(UUID customerId);
+    AdminCustomerResponse blockCustomer(UUID customerId, String reason, Integer durationDays);
     AdminCustomerResponse unblockCustomer(UUID customerId);
     AdminCustomerResponse deleteCustomer(UUID customerId);
     List<AdminCustomerOrderResponse> getCustomerOrderHistory(UUID customerId);

@@ -6,19 +6,32 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/admin/auth")
 public class AdminAuthController {
     private final AdminAuthService adminAuthService;
-    @Autowired
-    public AdminAuthController(AdminAuthService adminAuthService) {this.adminAuthService = adminAuthService;
-    } @PostMapping("/login")
+@Autowired
+    public AdminAuthController(AdminAuthService adminAuthService) {
+        this.adminAuthService = adminAuthService;
+    }@PostMapping("/register")
+    public ResponseEntity<AdminLoginResponse> register(
+            @Valid @RequestBody com.Siddhant.UserApp.dto.admin.AdminRegisterRequest request) {
+        AdminLoginResponse response = adminAuthService.register(request);
+        if ("Admin registered successfully".equals(response.getMessage())) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }@PostMapping("/login")
     public ResponseEntity<AdminLoginResponse> login(@Valid @RequestBody AdminLoginRequest request) {
         AdminLoginResponse response = adminAuthService.login(request);
         if ("Admin login successful".equals(response.getMessage())) {
             return ResponseEntity.ok(response);
-        } else if ("Access Denied: Not an Administrator".equals(response.getMessage())) {
+        } else if ("Access Denied: Not an Administrator".equals(response.getMessage()) ||
+                   "Account Deleted".equals(response.getMessage()) ||
+                   "Account Inactive".equals(response.getMessage())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         } else if ("Incorrect Password".equals(response.getMessage()) || "Email not found".equals(response.getMessage())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
@@ -26,4 +39,5 @@ public class AdminAuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
+
 }

@@ -26,6 +26,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByRoleAndStatusAndIsActiveTrue(Role role, Status status);
 
+    List<User> findByRoleAndIsActiveTrue(Role role);
+
     List<User> findByRoleAndStatusAndIsActiveFalse(Role role, Status status);
 
     @Query("""

@@ -9,6 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
+import com.Siddhant.UserApp.dto.FarmerStatusDataResponse;
+import com.Siddhant.UserApp.dto.FarmerStatusUpdateRequest;
+
 public interface FarmerService {
     FarmerResponse saveFarmer(FarmerRequest request, MultipartFile photo);
     List<FarmerResponse> getAllFarmers();
@@ -19,4 +22,5 @@ public interface FarmerService {
     String uploadPhoto(UUID farmerId, MultipartFile file);
     List<FarmerResponse> getFarmersByState(String state);
     List<FarmerResponse> getNearbyFarmers(String state, String village);
+    FarmerStatusDataResponse updateFarmerStatus(FarmerStatusUpdateRequest request);
 }

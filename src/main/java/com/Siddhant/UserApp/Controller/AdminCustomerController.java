@@ -32,8 +32,12 @@ public class AdminCustomerController {
         response.put("message", "Blocked customers fetched successfully");response.put("data", customers);
         return ResponseEntity.ok(response);
     }@PutMapping("/{customerId}/block")
-    public ResponseEntity<Map<String, Object>> blockCustomer(@PathVariable UUID customerId) {AdminCustomerResponse customer = adminCustomerService.blockCustomer(customerId);
-        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Customer blocked successfully");
+    public ResponseEntity<Map<String, Object>> blockCustomer(
+            @PathVariable UUID customerId,
+            @RequestBody com.Siddhant.UserApp.dto.admin.BlockCustomerRequest request) {
+        AdminCustomerResponse customer = adminCustomerService.blockCustomer(customerId, request.getReason(), request.getDurationDays());
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Customer blocked successfully");
         response.put("data", customer);
         return ResponseEntity.ok(response);
     }@PutMapping("/{customerId}/unblock")

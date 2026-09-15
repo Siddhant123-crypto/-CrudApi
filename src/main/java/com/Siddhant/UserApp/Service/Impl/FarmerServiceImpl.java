@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+
 @Service
 public class FarmerServiceImpl implements FarmerService {
 
@@ -183,10 +186,10 @@ public class FarmerServiceImpl implements FarmerService {
             if (!user.getPassword().equals(request.getPassword())) {
                 return new LoginResponse("Incorrect Password", null, null);
             }
-            if (!user.getIsActive()) {
-                return new LoginResponse("Farmer Account is Inactive", null, null);
+            if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE) {
+                return new LoginResponse("Farmer Account is Blocked by Admin", null, null);
             }
-            if (user.getIsDelete()) {
+            if (user.getIsDelete() != null && user.getIsDelete()) {
                 return new LoginResponse("Farmer Account Deleted", null, null);
             }
             
@@ -254,5 +257,44 @@ public class FarmerServiceImpl implements FarmerService {
     public List<FarmerResponse> getNearbyFarmers(String state, String village) {
         List<FarmerProfile> farmers = farmerProfileRepository.findByUser_StateAndUser_Village(state, village);
         return farmers.stream().map(MapperBuild::buildFarmerResponse).toList();
+    }
+
+    @Override
+    public FarmerStatusDataResponse updateFarmerStatus(FarmerStatusUpdateRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new RuntimeException("Unauthorized: No authenticated user found");
+        }
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found for email: " + email));
+
+        if (user.getRole() != Role.FARMER) {
+            throw new RuntimeException("Access denied: Only farmers can change their own status");
+        }
+
+        // Check if farmer is blocked by Admin
+        if (user.getStatus() == Status.INACTIVE) {
+            throw new RuntimeException("Account is blocked by Admin. You cannot change your active status.");
+        }
+
+        if (Boolean.FALSE.equals(request.getIsActive())) {
+            if (request.getInactiveReason() == null || request.getInactiveReason().trim().isEmpty()) {
+                throw new RuntimeException("Inactive reason is required when setting status to inactive");
+            }
+            user.setIsActive(false);
+            user.setInactiveReason(request.getInactiveReason().trim());
+            user.setInactiveSince(LocalDateTime.now());
+        } else if (Boolean.TRUE.equals(request.getIsActive())) {
+            user.setIsActive(true);
+            user.setInactiveReason(null);
+            user.setInactiveSince(null);
+        } else {
+            throw new RuntimeException("isActive status must be specified (true or false)");
+        }
+
+        userRepository.save(user);
+
+        return new FarmerStatusDataResponse(user.getIsActive(), user.getInactiveReason(), user.getInactiveSince());
     }
 }

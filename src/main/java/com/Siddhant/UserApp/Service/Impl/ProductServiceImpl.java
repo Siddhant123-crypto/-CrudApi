@@ -7,6 +7,9 @@ import com.Siddhant.UserApp.Service.ProductService;
 import com.Siddhant.UserApp.dto.ProductRequest;
 import com.Siddhant.UserApp.dto.ProductResponse;
 import com.Siddhant.UserApp.mapper.MapperBuild;
+import com.Siddhant.UserApp.Service.NotificationService;
+import com.Siddhant.UserApp.dto.NotificationSendRequest;
+import com.Siddhant.UserApp.enums.NotificationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.Siddhant.UserApp.dto.ProductUpdateResponse;
@@ -28,10 +31,13 @@ public class ProductServiceImpl implements ProductService {
     private String uploadDir;
     private final ProductRepository productRepository;
     private final FarmerProfileRepository farmerProfileRepository;
+    private final NotificationService notificationService;
+
     @Autowired
-    public ProductServiceImpl(ProductRepository productRepository, FarmerProfileRepository farmerProfileRepository) {
+    public ProductServiceImpl(ProductRepository productRepository, FarmerProfileRepository farmerProfileRepository, NotificationService notificationService) {
         this.productRepository = productRepository;
         this.farmerProfileRepository = farmerProfileRepository;
+        this.notificationService = notificationService;
     }
     // =========================================================
     // SAVE PRODUCT
@@ -90,7 +96,7 @@ public class ProductServiceImpl implements ProductService {
             product.setCreatedOn(now);
             product.setUpdatedBy(farmerName);
             product.setUpdatedOn(now);
-            product.setIsActive(true);
+            product.setIsActive(true); // Active immediately
             product.setIsDelete(false);
             product.setStatus("ACTIVE");
             // -------------------------------------------------
@@ -98,6 +104,7 @@ public class ProductServiceImpl implements ProductService {
             // -------------------------------------------------
             Product savedProduct = productRepository.save(product);
             log.info("Product saved successfully: {}", savedProduct.getProductId());
+
             return MapperBuild.buildProductResponse(savedProduct);
         } catch (Exception e) {
             log.error("Error saving product", e);
@@ -108,10 +115,12 @@ public class ProductServiceImpl implements ProductService {
     // GET ALL PRODUCTS
     // =========================================================
     @Override
-    public List<ProductResponse> getAllProducts() {List<Product> products = productRepository.findAll();
+    public List<ProductResponse> getAllProducts() {
+        List<Product> products = productRepository.findByIsActiveTrueAndIsDeleteFalse();
         log.debug("Total Products retrieved: {}", products.size());
         List<ProductResponse> responseList = new ArrayList<>();
-        for (Product product : products) {if (Boolean.TRUE.equals(product.getIsDelete())) {continue;}
+        for (Product product : products) {
+            if (product.getFarmer() == null || product.getFarmer().getUser() == null) {continue;}
             responseList.add(MapperBuild.buildProductResponse(product));
         }
         return responseList;
@@ -243,24 +252,32 @@ public class ProductServiceImpl implements ProductService {
     // SEARCH PRODUCTS
     // =========================================================
     @Override
-    public List<ProductResponse> searchProducts(String keyword) {List<Product> products = productRepository.findByProductNameContainingIgnoreCase(keyword);return products.stream().filter(product -> !Boolean.TRUE.equals(product.getIsDelete())).map(MapperBuild::buildProductResponse).toList();}
+    public List<ProductResponse> searchProducts(String keyword) {
+        List<Product> products = productRepository.findByProductNameContainingIgnoreCaseAndIsActiveTrueAndIsDeleteFalse(keyword);
+        return products.stream()
+            .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
+            .map(MapperBuild::buildProductResponse).toList();
+    }
     // =========================================================
     // PRICE RANGE
     // =========================================================
     @Override
-    public List<ProductResponse> findByPriceBetween(Double minPrice, Double maxPrice
-    ) {
-        return productRepository.findByPriceBetween(minPrice, maxPrice).stream().filter(product -> !Boolean.TRUE.equals(product.getIsDelete())).map(MapperBuild::buildProductResponse).toList();
+    public List<ProductResponse> findByPriceBetween(Double minPrice, Double maxPrice) {
+        return productRepository.findByPriceBetweenAndIsActiveTrueAndIsDeleteFalse(minPrice, maxPrice).stream()
+            .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
+            .map(MapperBuild::buildProductResponse).toList();
     }
     @Override
-    public List<ProductResponse> filterByPrice(Double minPrice, Double maxPrice
-    ) {
-        return productRepository.findByPriceBetween(minPrice, maxPrice).stream().filter(product -> !Boolean.TRUE.equals(product.getIsDelete())).map(MapperBuild::buildProductResponse).toList();
+    public List<ProductResponse> filterByPrice(Double minPrice, Double maxPrice) {
+        return productRepository.findByPriceBetweenAndIsActiveTrueAndIsDeleteFalse(minPrice, maxPrice).stream()
+            .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
+            .map(MapperBuild::buildProductResponse).toList();
     }
     @Override
-    public List<ProductResponse> filterByCategoryAndPrice(String category, Double minPrice, Double maxPrice
-    ) {
-        return productRepository.findByCategoryIgnoreCaseAndPriceBetween(category, minPrice, maxPrice).stream().filter(product -> !Boolean.TRUE.equals(product.getIsDelete())).map(MapperBuild::buildProductResponse).toList();
+    public List<ProductResponse> filterByCategoryAndPrice(String category, Double minPrice, Double maxPrice) {
+        return productRepository.findByCategoryIgnoreCaseAndPriceBetweenAndIsActiveTrueAndIsDeleteFalse(category, minPrice, maxPrice).stream()
+            .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
+            .map(MapperBuild::buildProductResponse).toList();
     }    // =========================================================
     // PRODUCTS BY FARMER
     // =========================================================
@@ -270,7 +287,11 @@ public class ProductServiceImpl implements ProductService {
     // ACTIVE PRODUCTS
     // =========================================================
     @Override
-    public List<ProductResponse> getActiveProducts() {return productRepository.findByIsActiveTrueAndIsDeleteFalse().stream().map(MapperBuild::buildProductResponse).toList();}
+    public List<ProductResponse> getActiveProducts() {
+        return productRepository.findByIsActiveTrueAndIsDeleteFalse().stream()
+            .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
+            .map(MapperBuild::buildProductResponse).toList();
+    }
     // =========================================================
     // TOGGLE STATUS
     // =========================================================
@@ -302,4 +323,5 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public String uploadVideo(UUID productId, MultipartFile video) {Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));String fileName = saveFile(video);product.setProductVideo(fileName);product.setUpdatedOn(LocalDateTime.now());productRepository.save(product);return "Product video uploaded successfully";
     }
+
 }

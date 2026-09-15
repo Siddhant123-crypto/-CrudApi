@@ -23,6 +23,8 @@ public class ProductResponse {
     private String harvestDate;
     // Optional product video
     private String productVideo;
+    private Boolean farmerActive;
+    private String farmerInactiveReason;
     private Boolean isActive;
     private Boolean isDelete;
     private String status;

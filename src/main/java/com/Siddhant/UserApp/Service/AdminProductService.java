@@ -13,11 +13,6 @@ public interface AdminProductService {
     List<AdminProductResponse> getProductsByFarmer(UUID farmerId);
     List<AdminProductResponse> searchProducts(String keyword);
     List<AdminProductResponse> filterProducts(String category, Double minPrice, Double maxPrice);
-    AdminProductResponse approveProduct(UUID productId);
-    AdminProductResponse rejectProduct(UUID productId);
     AdminProductResponse activateProduct(UUID productId);
     AdminProductResponse deactivateProduct(UUID productId);
-    List<AdminProductResponse> getPendingProducts();
-    List<AdminProductResponse> getApprovedProducts();
-    List<AdminProductResponse> getRejectedProducts();
 }

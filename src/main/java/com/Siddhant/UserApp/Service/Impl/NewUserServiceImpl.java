@@ -56,8 +56,8 @@ public class NewUserServiceImpl implements NewUserService {
                 if (!user.getPassword().equals(request.getPassword())) {
                     return new NewUserLoginResponse("Incorrect Password", null);
                 }
-                if (!user.getIsActive()) {
-                    return new NewUserLoginResponse("Account Inactive", null);
+                if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {
+                    return new NewUserLoginResponse("Account Blocked by Admin", null);
                 }
                 if (user.getIsDelete()) {
                     return new NewUserLoginResponse("Account Deleted", null);
@@ -72,6 +72,9 @@ public class NewUserServiceImpl implements NewUserService {
                 data.setEmail(user.getEmail());
                 data.setRole(user.getRole() == Role.CUSTOMER ? "Customer" : "Farmer");
                 data.setProfilePhoto(user.getProfilePhoto());
+                data.setStatus(user.getStatus());
+                data.setBlockReason(user.getBlockReason());
+                data.setBlockedUntil(user.getBlockedUntil());
                 
                 if (user.getRole() == Role.FARMER) {
                     FarmerProfile farmer = farmerProfileRepository.findByUser(user).orElse(null);
@@ -118,8 +121,8 @@ public class NewUserServiceImpl implements NewUserService {
             
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if (!user.getIsActive()) {
-                    return new NewUserLoginResponse("Account Inactive", null);
+                if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {
+                    return new NewUserLoginResponse("Account Blocked by Admin", null);
                 }
                 if (user.getIsDelete()) {
                     return new NewUserLoginResponse("Account Deleted", null);
@@ -134,6 +137,9 @@ public class NewUserServiceImpl implements NewUserService {
                 data.setEmail(user.getEmail());
                 data.setRole(user.getRole() == Role.CUSTOMER ? "Customer" : "Farmer");
                 data.setProfilePhoto(user.getProfilePhoto());
+                data.setStatus(user.getStatus());
+                data.setBlockReason(user.getBlockReason());
+                data.setBlockedUntil(user.getBlockedUntil());
                 
                 if (user.getRole() == Role.FARMER) {
                     FarmerProfile farmer = farmerProfileRepository.findByUser(user).orElse(null);

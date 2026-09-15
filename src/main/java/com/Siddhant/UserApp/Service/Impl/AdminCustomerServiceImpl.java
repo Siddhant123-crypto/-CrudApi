@@ -39,19 +39,33 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
                 ).stream().map(this::mapToResponse).toList();
     }
     @Override
-    public AdminCustomerResponse blockCustomer(UUID customerId) {
-        User user = userRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
-        if (user.getRole() != Role.CUSTOMER) {throw new RuntimeException("Customer not found");
-        }user.setStatus(Status.INACTIVE);user.setIsActive(false);
-        User savedUser = userRepository.save(user);
-        return mapToResponse(savedUser);
+    public AdminCustomerResponse blockCustomer(UUID customerId, String reason, Integer durationDays) {
+        User user = userRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        user.setStatus(com.Siddhant.UserApp.Entity.Status.INACTIVE);
+        user.setIsActive(false);
+        user.setBlockReason(reason);
+        if (durationDays != null) {
+            user.setBlockedUntil(java.time.LocalDateTime.now().plusDays(durationDays));
+        } else {
+            user.setBlockedUntil(null);
+        }
+        
+        userRepository.save(user);
+        return mapToResponse(user);
     }@Override
     public AdminCustomerResponse unblockCustomer(UUID customerId) {
-        User user = userRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
-        if (user.getRole() != Role.CUSTOMER) {throw new RuntimeException("Customer not found");
-        }user.setStatus(Status.ACTIVE);user.setIsActive(true);
-        User savedUser = userRepository.save(user);
-        return mapToResponse(savedUser);
+        User user = userRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        user.setStatus(com.Siddhant.UserApp.Entity.Status.ACTIVE);
+        user.setIsActive(true);
+        user.setBlockReason(null);
+        user.setBlockedUntil(null);
+        userRepository.save(user);
+
+        return mapToResponse(user);
     }@Override
     public AdminCustomerResponse deleteCustomer(UUID customerId) {User user = userRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
         if (user.getRole() != Role.CUSTOMER) {throw new RuntimeException("Customer not found");

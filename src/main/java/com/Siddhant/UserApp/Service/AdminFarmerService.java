@@ -11,7 +11,7 @@ public interface AdminFarmerService {
     List<AdminFarmerResponse> getPendingFarmers();
     List<AdminFarmerResponse> getVerifiedFarmers();
     List<AdminFarmerResponse> getBlockedFarmers();
-    AdminFarmerResponse blockFarmer(UUID farmerId);
+    AdminFarmerResponse blockFarmer(UUID farmerId, String reason, Integer durationDays);
     AdminFarmerResponse unblockFarmer(UUID farmerId);
     AdminFarmerResponse verifyFarmer(UUID farmerId);
     AdminFarmerResponse deleteFarmer(UUID farmerId);

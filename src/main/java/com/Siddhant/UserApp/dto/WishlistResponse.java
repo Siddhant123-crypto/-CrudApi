@@ -19,5 +19,7 @@ public class WishlistResponse {
     private String productVideo;
     private Double averageRating;
     private Integer reviewCount;
+    private Boolean farmerActive;
+    private String farmerInactiveReason;
     private LocalDateTime createdAt;
 }

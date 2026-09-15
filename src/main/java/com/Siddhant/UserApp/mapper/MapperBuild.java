@@ -27,6 +27,8 @@ public class MapperBuild {
             response.setUpdatedBy(user.getUpdatedBy());
             response.setUpdatedOn(user.getUpdatedOn());
             response.setIsActive(user.getIsActive());
+            response.setInactiveReason(user.getInactiveReason());
+            response.setInactiveSince(user.getInactiveSince());
             response.setIsDelete(user.getIsDelete());
             response.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
         }
@@ -54,6 +56,8 @@ public class MapperBuild {
                 response.setFarmerAddress(user.getAddress());
                 response.setFarmerState(user.getState());
                 response.setFarmerVillage(user.getVillage());
+                response.setFarmerActive(user.getIsActive());
+                response.setFarmerInactiveReason(user.getInactiveReason());
             }
         }
 

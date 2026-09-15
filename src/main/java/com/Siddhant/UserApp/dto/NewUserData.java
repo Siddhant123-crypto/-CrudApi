@@ -12,4 +12,7 @@ public class NewUserData {
     private UUID userId;
     private UUID farmerId;
     private String profilePhoto;
+    private com.Siddhant.UserApp.Entity.Status status;
+    private String blockReason;
+    private java.time.LocalDateTime blockedUntil;
 }

@@ -101,6 +101,9 @@ public class OrderServiceImpl implements OrderService {
                 throw new RuntimeException(
                         "Farmer not found for product: " + product.getProductName());
 
+            if (productFarmer.getUser() != null && !Boolean.TRUE.equals(productFarmer.getUser().getIsActive()))
+                throw new RuntimeException("This farmer is currently inactive. This product is temporarily unavailable.");
+
             // ==================== STOCK ====================
 
             if (product.getQuantity() == null)
@@ -989,6 +992,9 @@ public class OrderServiceImpl implements OrderService {
 
                     itemResponse.setImageUrl(
                             item.getProduct().getProductPhoto());
+                            
+                    itemResponse.setHarvestDate(
+                            item.getProduct().getHarvestDate());
                 }
 
                 itemResponse.setProductName(item.getProductName());
@@ -1000,13 +1006,23 @@ public class OrderServiceImpl implements OrderService {
 
                 if (item.getFarmer() != null) {
                     itemResponse.setFarmerId(item.getFarmer().getId());
+                    if (item.getFarmer().getUser() != null) {
+                        itemResponse.setFarmerUserId(item.getFarmer().getUser().getUserId());
+                    }
                     if (item.getFarmer().getUser() != null && item.getFarmer().getUser().getName() != null) {
                         itemResponse.setFarmerName(item.getFarmer().getUser().getName());
+                        itemResponse.setFarmerMobile(item.getFarmer().getUser().getMobile());
                     } else {
                         // Explicitly fetch to resolve any Hibernate Proxy initialization issues with the lazy relation
                         FarmerProfile explicitFarmer = farmerProfileRepository.findById(item.getFarmer().getId()).orElse(null);
-                        if (explicitFarmer != null && explicitFarmer.getUser() != null && explicitFarmer.getUser().getName() != null) {
-                            itemResponse.setFarmerName(explicitFarmer.getUser().getName());
+                        if (explicitFarmer != null && explicitFarmer.getUser() != null) {
+                            itemResponse.setFarmerUserId(explicitFarmer.getUser().getUserId());
+                            if (explicitFarmer.getUser().getName() != null) {
+                                itemResponse.setFarmerName(explicitFarmer.getUser().getName());
+                                itemResponse.setFarmerMobile(explicitFarmer.getUser().getMobile());
+                            } else {
+                                itemResponse.setFarmerName(item.getFarmer().getFarmName());
+                            }
                         } else {
                             itemResponse.setFarmerName(item.getFarmer().getFarmName());
                         }

@@ -23,7 +23,7 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
     @Override
     public List<AdminFarmerResponse> getAllFarmers() {return farmerProfileRepository.findAll().stream().filter(farmer -> farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER")).map(this::mapToResponse).toList();
     }private AdminFarmerResponse mapToResponse(FarmerProfile farmer) {var user = farmer.getUser();
-        return new AdminFarmerResponse(farmer.getId(), user.getName(), user.getEmail(), user.getMobile(), user.getVillage(), user.getAddress(), user.getPostalCode(), user.getState(), user.getStatus(), user.getIsActive(), farmer.getFarmName(), farmer.getFarmingType(), farmer.getFarmSize(), farmer.getFarmSizeUnit(), farmer.getMainCrops(), farmer.getExperienceYears(), farmer.getSoilType(), farmer.getFarmVideo(), farmer.getAboutFarm(), farmer.getVerified(), farmer.getCertificateFile(), user.getProfilePhoto());
+        return new AdminFarmerResponse(farmer.getId(), user.getName(), user.getEmail(), user.getMobile(), user.getVillage(), user.getAddress(), user.getPostalCode(), user.getState(), user.getStatus(), user.getIsActive(), user.getInactiveReason(), user.getInactiveSince(), farmer.getFarmName(), farmer.getFarmingType(), farmer.getFarmSize(), farmer.getFarmSizeUnit(), farmer.getMainCrops(), farmer.getExperienceYears(), farmer.getSoilType(), farmer.getFarmVideo(), farmer.getAboutFarm(), farmer.getVerified(), farmer.getCertificateFile(), user.getProfilePhoto());
     }@Override
     public AdminFarmerResponse getFarmerById(UUID farmerId) {
         FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
@@ -41,18 +41,27 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
         return farmerProfileRepository.findByUser_Status(Status.INACTIVE).stream().filter(farmer -> farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER"))
                 .map(this::mapToResponse).toList();
     }@Override
-    public AdminFarmerResponse blockFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
+    public AdminFarmerResponse blockFarmer(UUID farmerId, String reason, Integer durationDays) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
         if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {
             throw new RuntimeException("Farmer not found");
         }farmer.getUser().setIsActive(false);
         farmer.getUser().setStatus(Status.INACTIVE);
+        farmer.getUser().setBlockReason(reason);
+        if (durationDays != null) {
+            farmer.getUser().setBlockedUntil(java.time.LocalDateTime.now().plusDays(durationDays));
+        } else {
+            farmer.getUser().setBlockedUntil(null); // Indefinite block or logic depends on requirements
+        }
         farmerProfileRepository.save(farmer);
         return mapToResponse(farmer);
     }@Override
     public AdminFarmerResponse unblockFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
         if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");
         }farmer.getUser().setIsActive(true);
-        farmer.getUser().setStatus(Status.ACTIVE);farmerProfileRepository.save(farmer);return mapToResponse(farmer);
+        farmer.getUser().setStatus(Status.ACTIVE);
+        farmer.getUser().setBlockReason(null);
+        farmer.getUser().setBlockedUntil(null);
+        farmerProfileRepository.save(farmer);return mapToResponse(farmer);
     }@Override
     public AdminFarmerResponse verifyFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
         if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");

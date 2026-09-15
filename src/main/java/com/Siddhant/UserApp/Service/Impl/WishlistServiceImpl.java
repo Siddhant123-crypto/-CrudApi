@@ -62,7 +62,16 @@ public class WishlistServiceImpl implements WishlistService {
         WishlistResponse response = new WishlistResponse();response.setWishlistId(wishlist.getWishlistId());response.setProductId(product.getProductId());response.setProductName(product.getProductName());response.setCategory(product.getCategory());response.setPrice(product.getPrice());response.setQuantity(product.getQuantity());
         if (product.getUnit() != null) {response.setUnit(product.getUnit().toString());
         }response.setDescription(product.getDescription());response.setProductPhoto(product.getProductPhoto()
-        );response.setProductVideo(product.getProductVideo());response.setAverageRating(product.getAverageRating());response.setReviewCount(product.getReviewCount());response.setCreatedAt(wishlist.getCreatedAt());
+        );response.setProductVideo(product.getProductVideo());response.setAverageRating(product.getAverageRating());response.setReviewCount(product.getReviewCount());
+        
+        if (product.getFarmer() != null && product.getFarmer().getUser() != null) {
+            response.setFarmerActive(product.getFarmer().getUser().getIsActive());
+            response.setFarmerInactiveReason(product.getFarmer().getUser().getInactiveReason());
+        } else {
+            response.setFarmerActive(true);
+        }
+        
+        response.setCreatedAt(wishlist.getCreatedAt());
         return response;
     }
 }

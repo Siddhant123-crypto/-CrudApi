@@ -10,29 +10,22 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import com.Siddhant.UserApp.Repository.UserRepository;
 import com.Siddhant.UserApp.Repository.AdminRepository;
 import java.util.Collections;
-
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final AdminRepository adminRepository;
-
     public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository, AdminRepository adminRepository) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.adminRepository = adminRepository;
-    }
-    @Override
+    }@Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {String path = request.getRequestURI();System.out.println("================================");System.out.println("REQUEST : " + request.getMethod());System.out.println("URL     : " + path);
-        // =========================
-        // PUBLIC APIs
-        // =========================
         if (path.equals("/user/login")
                 || path.equals("/user/register")
                 || path.equals("/user/google-login")
@@ -46,49 +39,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/user/getPhoto/")
                 || path.startsWith("/product/image/")
                 || path.startsWith("/auth/")
-                || path.equals("/admin/login")) {
+                || path.equals("/admin/auth/login")
+                || path.equals("/admin/auth/register")) {
             System.out.println("PUBLIC API - JWT FILTER SKIPPED");
             filterChain.doFilter(request, response);
             return;
-        }
-        // =========================
-        // GET AUTHORIZATION HEADER
-        // =========================
-        String authHeader = request.getHeader("Authorization");
-        System.out.println("AUTH HEADER : " + authHeader);
-        // No token
+        }String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("NO JWT TOKEN");
+            System.out.println("NO JWT TOKEN PRESENT");
             filterChain.doFilter(request, response);
             return;
-        }
-        // Remove "Bearer "
+        }System.out.println("AUTH HEADER PRESENT");
         String token = authHeader.substring(7);
-        try {
-            // =========================
-            // EXTRACT USERNAME + ROLE
-            // =========================
-            String username = jwtService.extractUsername(token);
+        try {String username = jwtService.extractUsername(token);
             String role = jwtService.extractRole(token);
-            
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // =========================
-                // VALIDATE TOKEN
-                // =========================
                 if (jwtService.validateToken(token, username)) {
                     boolean isValidUser = false;
-                    
                     if ("ADMIN".equalsIgnoreCase(role)) {
                         isValidUser = adminRepository.findByEmail(username)
-                            .map(admin -> admin.getIsActive() != null && admin.getIsActive() && (admin.getIsDelete() == null || !admin.getIsDelete()))
+                            .map(admin -> (admin.getIsDelete() == null || !admin.getIsDelete()))
                             .orElse(false);
                     } else if ("CUSTOMER".equalsIgnoreCase(role) || "FARMER".equalsIgnoreCase(role)) {
-                        isValidUser = userRepository.findByEmail(username)
-                            .map(user -> user.getIsActive() != null && user.getIsActive() && (user.getIsDelete() == null || !user.getIsDelete()))
-                            .orElse(false);
-                    }
-                    
-                    if (isValidUser) {
+                        boolean isSupportPath = path.startsWith("/support");
+                        isValidUser = userRepository.findFirstByEmail(username)
+                            .map(user -> {
+                                boolean isActive = user.getStatus() != com.Siddhant.UserApp.Entity.Status.INACTIVE;
+                                boolean isNotDeleted = user.getIsDelete() == null || !user.getIsDelete();
+                                return (isActive || isSupportPath) && isNotDeleted;
+                            })
+                            .orElseGet(() -> userRepository.findFirstByMobile(username)
+                                .map(user -> {
+                                    boolean isActive = user.getStatus() != com.Siddhant.UserApp.Entity.Status.INACTIVE;
+                                    boolean isNotDeleted = user.getIsDelete() == null || !user.getIsDelete();
+                                    return (isActive || isSupportPath) && isNotDeleted;
+                                })
+                                .orElse(false));
+                    }if (isValidUser) {
                         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 username, null, Collections.singletonList(authority));
@@ -105,7 +92,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             System.out.println("JWT Authentication Failed : " + e.getMessage());
-        }
-        filterChain.doFilter(request, response);
+        }filterChain.doFilter(request, response);
     }
 }

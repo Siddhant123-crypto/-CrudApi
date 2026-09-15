@@ -145,10 +145,10 @@ public class UserServiceImpl implements UserService {
             if (!user.getPassword().equals(request.getPassword())) {
                 return new LoginResponse("Incorrect Password", null, null);
             }
-            if (!user.getIsActive()) {
-                return new LoginResponse("User Account is Inactive", null, null);
+            if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE) {
+                return new LoginResponse("User Account is Blocked by Admin", null, null);
             }
-            if (user.getIsDelete()) {
+            if (user.getIsDelete() != null && user.getIsDelete()) {
                 return new LoginResponse("User Account Deleted", null, null);
             }
             

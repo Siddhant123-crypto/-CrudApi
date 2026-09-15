@@ -140,6 +140,9 @@ public class CartServiceImpl implements CartService {
         if (Boolean.FALSE.equals(product.getIsActive()) || Boolean.TRUE.equals(product.getIsDelete())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This product is not available");
         }
+        if (product.getFarmer() != null && product.getFarmer().getUser() != null && !Boolean.TRUE.equals(product.getFarmer().getUser().getIsActive())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This farmer is currently inactive. This product is temporarily unavailable.");
+        }
     }private void validateQuantity(CartQuantityRequest request) {
         if (request == null || request.getQuantity() == null ||
                 request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {

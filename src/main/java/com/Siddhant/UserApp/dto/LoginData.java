@@ -13,4 +13,7 @@ public class LoginData {
     private UUID farmerId;
     private UUID userId;
     private String profilePhoto;
+    private com.Siddhant.UserApp.Entity.Status status;
+    private String blockReason;
+    private java.time.LocalDateTime blockedUntil;
 }

@@ -9,13 +9,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
-    @Bean
+    }@Bean
     public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
         return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
-    }
-
-    @Bean
+    }@Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {http.csrf(csrf -> csrf.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(
@@ -26,11 +23,11 @@ public class SecurityConfig {
                             "/product/image/**", "/product/video/**",
                             "/auth/**",
                             "/uploads/**",  // Allow public access to all uploaded media files (farm images, videos, etc.)
-                            "/admin/login"  // Admin login is public
+                            "/admin/auth/login",  // Admin login is public
+                            "/admin/auth/register" // Admin register is unprotected for Postman setup
                         ).permitAll()
                     .requestMatchers("/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
-            ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+            ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);return http.build();
     }
 }

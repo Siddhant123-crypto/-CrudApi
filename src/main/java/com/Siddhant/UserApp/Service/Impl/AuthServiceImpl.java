@@ -62,8 +62,8 @@ public class AuthServiceImpl implements AuthService {
                 if (!user.getPassword().equals(request.getPassword())) {
                     return new LoginResponse("Incorrect Password", null, null);
                 }
-                if (!user.getIsActive()) {
-                    return new LoginResponse("Account Inactive", null, null);
+                if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {
+                    return new LoginResponse("Account Blocked by Admin", null, null);
                 }
                 if (user.getIsDelete()) {
                     return new LoginResponse("Account Deleted", null, null);
@@ -73,6 +73,9 @@ public class AuthServiceImpl implements AuthService {
                 data.setName(user.getName());
                 data.setEmail(user.getEmail());
                 data.setRole(user.getRole());
+                data.setStatus(user.getStatus());
+                data.setBlockReason(user.getBlockReason());
+                data.setBlockedUntil(user.getBlockedUntil());
                 
                 if (user.getRole() == Role.FARMER) {
                     FarmerProfile farmer = farmerProfileRepository.findByUser(user).orElse(null);
@@ -152,6 +155,9 @@ public class AuthServiceImpl implements AuthService {
                 data.setName(user.getName());
                 data.setEmail(user.getEmail());
                 data.setRole(user.getRole());
+                data.setStatus(user.getStatus());
+                data.setBlockReason(user.getBlockReason());
+                data.setBlockedUntil(user.getBlockedUntil());
                 
                 if (user.getRole() == Role.FARMER) {
                     FarmerProfile farmer = farmerProfileRepository.findByUser(user).orElse(null);

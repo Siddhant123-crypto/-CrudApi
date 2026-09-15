@@ -3,6 +3,7 @@ import com.Siddhant.UserApp.Entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 import java.util.UUID;
 @Data
 @NoArgsConstructor
@@ -18,6 +19,8 @@ public class AdminFarmerResponse {
     private String state;
     private Status status;
     private Boolean isActive;
+    private String inactiveReason;
+    private LocalDateTime inactiveSince;
     private String farmName;
     private String farmingType;
     private Double farmSize;

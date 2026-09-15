@@ -22,6 +22,8 @@ public class FarmerResponse {
     private String updatedBy;
     private LocalDateTime updatedOn;
     private Boolean isActive;
+    private String inactiveReason;
+    private LocalDateTime inactiveSince;
     private Boolean isDelete;
     private String status;
     private String accessToken;

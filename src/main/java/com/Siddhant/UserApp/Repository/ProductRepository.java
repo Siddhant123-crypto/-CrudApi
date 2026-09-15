@@ -16,4 +16,11 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     List<Product> findByCategoryIgnoreCaseAndIsActiveTrueAndIsDeleteFalse(String category);
     List<Product> findByStatusIgnoreCase(String status);
     List<Product> findByStatusIgnoreCaseAndIsDeleteFalse(String status);
+    List<Product> findByStatusInIgnoreCaseAndIsDeleteFalse(List<String> statuses);
+    List<Product> findByFarmerAndStatusInIgnoreCaseAndIsDeleteFalse(FarmerProfile farmer, List<String> statuses);
+    List<Product> findByProductNameContainingIgnoreCaseAndStatusInIgnoreCaseAndIsDeleteFalse(String keyword, List<String> statuses);
+    List<Product> findByCategoryIgnoreCaseAndPriceBetweenAndStatusInIgnoreCaseAndIsDeleteFalse(String category, Double minPrice, Double maxPrice, List<String> statuses);
+    List<Product> findByPriceBetweenAndStatusInIgnoreCaseAndIsDeleteFalse(Double minPrice, Double maxPrice, List<String> statuses);
+    List<Product> findByPriceBetweenAndIsActiveTrueAndIsDeleteFalse(Double minPrice, Double maxPrice);
+    List<Product> findByCategoryIgnoreCaseAndPriceBetweenAndIsActiveTrueAndIsDeleteFalse(String category, Double minPrice, Double maxPrice);
 }

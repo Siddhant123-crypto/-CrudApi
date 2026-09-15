@@ -11,5 +11,6 @@ public interface FarmDetailsService {
     FarmDetailsResponse saveOrUpdateFarmDetails(String requestData, MultipartFile farmerPhoto, MultipartFile farmVideo) throws IOException;
     FarmDetailsResponse getFarmDetailsByFarmerId(UUID farmerId);
     FarmDetailsResponse updateFarmDetails(UUID farmerId, String requestData, MultipartFile farmerPhoto, MultipartFile farmVideo) throws IOException;
+    java.util.List<FarmDetailsResponse> getAllFarmDetails();
     void deleteFarmDetails(UUID farmerId) throws IOException;
 }

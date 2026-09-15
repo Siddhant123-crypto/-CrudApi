@@ -70,16 +70,6 @@ public class AdminProductController {
         List<AdminProductResponse> products = adminProductService.filterProducts(category, minPrice, maxPrice);
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Products filtered successfully");response.put("data", products);
         return ResponseEntity.ok(response);
-    }@PutMapping("/{productId}/approve")
-    public ResponseEntity<Map<String, Object>> approveProduct(@PathVariable UUID productId) {
-        AdminProductResponse product = adminProductService.approveProduct(productId);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Product approved successfully");
-        response.put("data", product);
-        return ResponseEntity.ok(response);
-    }@PutMapping("/{productId}/reject")
-    public ResponseEntity<Map<String, Object>> rejectProduct(@PathVariable UUID productId) {
-        AdminProductResponse product = adminProductService.rejectProduct(productId);Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Product rejected successfully");response.put("data", product);
-        return ResponseEntity.ok(response);
     }@PutMapping("/{productId}/activate")
     public ResponseEntity<Map<String, Object>> activateProduct(@PathVariable UUID productId) {
         AdminProductResponse product = adminProductService.activateProduct(productId);
@@ -89,21 +79,6 @@ public class AdminProductController {
     public ResponseEntity<Map<String, Object>> deactivateProduct(@PathVariable UUID productId) {
         AdminProductResponse product = adminProductService.deactivateProduct(productId);
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Product deactivated successfully");response.put("data", product);
-        return ResponseEntity.ok(response);
-    }@GetMapping("/pending")
-    public ResponseEntity<Map<String, Object>> getPendingProducts() {
-        List<AdminProductResponse> products = adminProductService.getPendingProducts();
-        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Pending products fetched successfully");response.put("data", products);
-        return ResponseEntity.ok(response);
-    }@GetMapping("/approved")
-    public ResponseEntity<Map<String, Object>> getApprovedProducts() {
-        List<AdminProductResponse> products = adminProductService.getApprovedProducts();
-        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Approved products fetched successfully");response.put("data", products);
-        return ResponseEntity.ok(response);
-    }@GetMapping("/rejected")
-    public ResponseEntity<Map<String, Object>> getRejectedProducts() {
-        List<AdminProductResponse> products = adminProductService.getRejectedProducts();
-        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Rejected products fetched successfully");response.put("data", products);
         return ResponseEntity.ok(response);
     }
 }

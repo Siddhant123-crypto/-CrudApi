@@ -39,6 +39,14 @@ public class User {
     private Integer loginCount = 0;
     private Boolean isDelete;
     private Boolean isActive;
+    @Column(name = "inactive_reason")
+    private String inactiveReason;
+    @Column(name = "inactive_since")
+    private LocalDateTime inactiveSince;
+    @Column(name = "blocked_until")
+    private LocalDateTime blockedUntil;
+    @Column(name = "block_reason")
+    private String blockReason;
     private LocalDateTime createdOn;
     private LocalDateTime updatedOn;
     private String createdBy;

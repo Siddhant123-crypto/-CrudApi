@@ -1,10 +1,14 @@
 package com.Siddhant.UserApp.Controller;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 
 import com.Siddhant.UserApp.Service.FarmerService;
 import com.Siddhant.UserApp.dto.FarmerRequest;
 import com.Siddhant.UserApp.dto.FarmerResponse;
+import com.Siddhant.UserApp.dto.FarmerStatusDataResponse;
+import com.Siddhant.UserApp.dto.FarmerStatusUpdateRequest;
 import com.Siddhant.UserApp.dto.LoginRequest;
 import com.Siddhant.UserApp.dto.LoginResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,5 +75,13 @@ public class FarmerController {
     public ResponseEntity<List<FarmerResponse>> getFarmersByState(@PathVariable String state) {
         List<FarmerResponse> farmers = farmerService.getFarmersByState(state);
         return ResponseEntity.ok(farmers);
+    }
+    @PutMapping("/status")
+    public ResponseEntity<Map<String, Object>> updateFarmerStatus(@Valid @RequestBody FarmerStatusUpdateRequest request) {
+        FarmerStatusDataResponse data = farmerService.updateFarmerStatus(request);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Farmer status updated successfully");
+        response.put("data", data);
+        return ResponseEntity.ok(response);
     }
 }

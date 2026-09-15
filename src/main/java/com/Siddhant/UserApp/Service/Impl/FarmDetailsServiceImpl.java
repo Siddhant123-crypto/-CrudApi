@@ -123,6 +123,13 @@ public class FarmDetailsServiceImpl implements FarmDetailsService {
     }
 
     @Override
+    public java.util.List<FarmDetailsResponse> getAllFarmDetails() {
+        return farmDetailsRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
     public void deleteFarmDetails(UUID farmerId) throws IOException {
         FarmDetails farmDetails = farmDetailsRepository.findByFarmerId(farmerId)
                 .orElseThrow(() -> new RuntimeException("Farm Details not found for farmer id: " + farmerId));

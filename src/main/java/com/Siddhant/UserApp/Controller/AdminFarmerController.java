@@ -39,8 +39,8 @@ public class AdminFarmerController {
         response.put("data", farmers);
         return ResponseEntity.ok(response);
     }@PutMapping("/{farmerId}/block")
-    public ResponseEntity<Map<String, Object>> blockFarmer(@PathVariable UUID farmerId) {
-        AdminFarmerResponse farmer = adminFarmerService.blockFarmer(farmerId);
+    public ResponseEntity<Map<String, Object>> blockFarmer(@PathVariable UUID farmerId, @RequestBody BlockFarmerRequest request) {
+        AdminFarmerResponse farmer = adminFarmerService.blockFarmer(farmerId, request.getReason(), request.getDurationDays());
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", "Farmer blocked successfully");response.put("data", farmer);return ResponseEntity.ok(response);
     }@PutMapping("/{farmerId}/unblock")

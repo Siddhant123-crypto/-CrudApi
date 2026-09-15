@@ -53,6 +53,15 @@ public class FarmDetailsController {
         return ResponseEntity.ok(apiResponse);
     }
 
+    @GetMapping("/getAll")
+    public ResponseEntity<java.util.Map<String, Object>> getAllFarmDetails() {
+        java.util.List<FarmDetailsResponse> response = farmDetailsService.getAllFarmDetails();
+        java.util.Map<String, Object> apiResponse = new java.util.HashMap<>();
+        apiResponse.put("message", "All farms fetched successfully");
+        apiResponse.put("data", response);
+        return ResponseEntity.ok(apiResponse);
+    }
+
     @DeleteMapping("/delete/{farmerId}")
     public ResponseEntity<FarmDetailsApiResponse> deleteFarmDetails(@PathVariable UUID farmerId) throws IOException {
         farmDetailsService.deleteFarmDetails(farmerId);
