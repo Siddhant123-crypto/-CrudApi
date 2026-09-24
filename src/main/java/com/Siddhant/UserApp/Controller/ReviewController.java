@@ -33,39 +33,32 @@ public class ReviewController {
         log.info("Received request to create review for product: {}", request.getProductId());
         ReviewResponse response = reviewService.createReview(request, photo, video);
         return ResponseEntity.ok(response);
-    }
-    @GetMapping("/product/{productId}/reviews")
+    }@GetMapping("/product/{productId}/reviews")
     public ResponseEntity<List<ReviewResponse>> getProductReviews(@PathVariable UUID productId) {
         log.info("Fetching reviews for product: {}", productId);
         return ResponseEntity.ok(
                 reviewService.getProductReviews(productId)
         );
-    }
-    @GetMapping("/product/{productId}/rating")
+    }@GetMapping("/product/{productId}/rating")
     public ResponseEntity<ProductRatingResponse> getProductRating(@PathVariable UUID productId) {
         log.info("Fetching rating for product: {}", productId
         );
         return ResponseEntity.ok(reviewService.getProductRating(productId)
         );
-    }
-    @PutMapping(value = "/{reviewId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    }@PutMapping(value = "/{reviewId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<ReviewResponse> updateReview(@PathVariable UUID reviewId, @RequestPart("data") String data, @RequestPart(value = "photo", required = false) MultipartFile photo, @RequestPart(value = "video", required = false) MultipartFile video
     ) {
         return null;
-    }
-    @DeleteMapping("/{reviewId}")
+    }@DeleteMapping("/{reviewId}")
     public ResponseEntity<Map<String, String>> deleteReview(@PathVariable UUID reviewId) {reviewService.deleteReview(reviewId);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Review deleted successfully");
         return ResponseEntity.ok(response);
-    }
-    @GetMapping("/farmer")
+    }@GetMapping("/farmer")
     public ResponseEntity<List<ReviewResponse>> getFarmerReviews(Authentication authentication) {
         String email = authentication.getName();
         log.info("Fetching reviews for farmer: {}", email
-        );
-        return ResponseEntity.ok(reviewService.getFarmerReviews()
-        );
+        );return ResponseEntity.ok(reviewService.getFarmerReviews());
     }
 }

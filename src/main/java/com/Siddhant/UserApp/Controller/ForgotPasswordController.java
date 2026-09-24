@@ -7,14 +7,10 @@ import com.Siddhant.UserApp.dto.ForgotPasswordRequest;
 @RestController
 @RequestMapping("/forgotpassword")
 @CrossOrigin("*")
-public class ForgotPasswordController {
-    private final ForgotPasswordService forgotPasswordService;
+public class ForgotPasswordController { private final ForgotPasswordService forgotPasswordService;
     @Autowired
-    public ForgotPasswordController(ForgotPasswordService forgotPasswordService) {
-        this.forgotPasswordService = forgotPasswordService;
-    }
-    @PostMapping
-    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        return forgotPasswordService.updatePassword(request);
+    public ForgotPasswordController(ForgotPasswordService forgotPasswordService) {this.forgotPasswordService = forgotPasswordService;
+    }@PostMapping
+    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {return forgotPasswordService.updatePassword(request);
     }
 }

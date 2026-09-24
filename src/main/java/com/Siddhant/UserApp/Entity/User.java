@@ -52,4 +52,17 @@ public class User {
     private String createdBy;
     private String updatedBy;
     private LocalDateTime lastLogin;
+    
+    public void checkAndClearExpiredBlock() {
+        if (this.status == Status.INACTIVE && this.blockedUntil != null) {
+            java.time.LocalDate currentDate = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate();
+            java.time.LocalDate blockedDate = this.blockedUntil.toLocalDate();
+            if (!currentDate.isBefore(blockedDate)) {
+                this.status = Status.ACTIVE;
+                this.isActive = true;
+                this.blockedUntil = null;
+                this.blockReason = null;
+            }
+        }
+    }
 }

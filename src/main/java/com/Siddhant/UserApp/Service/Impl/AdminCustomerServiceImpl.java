@@ -35,8 +35,16 @@ public class AdminCustomerServiceImpl implements AdminCustomerService {
                 ).stream().map(this::mapToResponse).toList();
     }@Override
     public List<AdminCustomerResponse> getBlockedCustomers() {
-        return userRepository.findByRoleAndStatusAndIsActiveFalse(Role.CUSTOMER, Status.INACTIVE
-                ).stream().map(this::mapToResponse).toList();
+        return userRepository.findByRoleAndStatusAndIsActiveFalse(Role.CUSTOMER, Status.INACTIVE).stream()
+                .filter(user -> {
+                    com.Siddhant.UserApp.Entity.Status oldStatus = user.getStatus();
+                    user.checkAndClearExpiredBlock();
+                    if (oldStatus != user.getStatus()) {
+                        // If status changed, we can save it here or it will just be omitted from this response
+                    }
+                    return user.getStatus() == Status.INACTIVE;
+                })
+                .map(this::mapToResponse).toList();
     }
     @Override
     public AdminCustomerResponse blockCustomer(UUID customerId, String reason, Integer durationDays) {

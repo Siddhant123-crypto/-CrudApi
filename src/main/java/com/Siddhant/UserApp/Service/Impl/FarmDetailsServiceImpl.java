@@ -41,6 +41,8 @@ public class FarmDetailsServiceImpl implements FarmDetailsService {
         } else {
             farmDetails = new FarmDetails();
             farmDetails.setFarmer(farmerProfile);
+            farmDetails.setVerificationRequestedOn(java.time.LocalDateTime.now());
+            farmDetails.setVerified(false);
         }
 
         farmDetails.setFarmName(request.getFarmName());
@@ -80,6 +82,11 @@ public class FarmDetailsServiceImpl implements FarmDetailsService {
 
         FarmDetails farmDetails = farmDetailsRepository.findByFarmerId(farmerId)
                 .orElseThrow(() -> new RuntimeException("Farm Details not found for farmer id: " + farmerId));
+                
+        // Reset verification status when farmer updates their details
+        farmDetails.setVerificationRequestedOn(java.time.LocalDateTime.now());
+        farmDetails.setVerified(false);
+        farmDetails.setVerificationMessage(null);
 
         // Update fields (excluding id, farmerId, verified, verifiedOn, certificateFile)
         if (request.getFarmName() != null) farmDetails.setFarmName(request.getFarmName());

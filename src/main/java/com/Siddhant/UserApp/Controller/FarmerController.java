@@ -34,8 +34,7 @@ public class FarmerController {
         log.info("Farmer Save API Called");
         FarmerRequest request = new ObjectMapper().readValue(data, FarmerRequest.class);
         return farmerService.saveFarmer(request, photo);
-    }
-    @PostMapping("/login")
+    }@PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return farmerService.login(request);
     }
@@ -53,30 +52,25 @@ public class FarmerController {
             @Valid @RequestBody FarmerRequest request) {
         FarmerResponse response = farmerService.updateFarmer(id, request);
         return ResponseEntity.ok(response);
-    }
-    @DeleteMapping("/delete/{id}")
+    }@DeleteMapping("/delete/{id}")
     public String deleteFarmer(@PathVariable UUID id) {
         return farmerService.deleteFarmer(id);
     }
     @PostMapping("/uploadPhoto/{id}")
     public String uploadPhoto(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         return farmerService.uploadPhoto(id, file);
-    }
-    @GetMapping("/getPhoto/{id}")
+    }@GetMapping("/getPhoto/{id}")
     public String getPhoto(@PathVariable UUID id) {
         FarmerResponse farmer = farmerService.getFarmerById(id);
         return farmer.getProfilePhoto();
-    }
-    @GetMapping("/nearby")
+    }@GetMapping("/nearby")
     public List<FarmerResponse> getNearbyFarmers(@RequestParam String state, @RequestParam String village) {
         return farmerService.getNearbyFarmers(state, village);
-    }
-    @GetMapping("/state/{state}")
+    }@GetMapping("/state/{state}")
     public ResponseEntity<List<FarmerResponse>> getFarmersByState(@PathVariable String state) {
         List<FarmerResponse> farmers = farmerService.getFarmersByState(state);
         return ResponseEntity.ok(farmers);
-    }
-    @PutMapping("/status")
+    }@PutMapping("/status")
     public ResponseEntity<Map<String, Object>> updateFarmerStatus(@Valid @RequestBody FarmerStatusUpdateRequest request) {
         FarmerStatusDataResponse data = farmerService.updateFarmerStatus(request);
         Map<String, Object> response = new LinkedHashMap<>();

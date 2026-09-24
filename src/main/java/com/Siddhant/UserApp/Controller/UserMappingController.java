@@ -16,17 +16,12 @@ public class UserMappingController {
     @Autowired
     public UserMappingController(UserMappingService userMappingService) {
         this.userMappingService = userMappingService;
-    }
-    @PostMapping("/save")
+    }@PostMapping("/save")
     public UserMappingResponse saveUserMapping(@RequestBody UserMappingRequest request) {
         log.debug("Saving User Mapping for User ID: {}", request.getUserId());
         return userMappingService.saveUserMapping(request);
-    }
-    @PutMapping("/update/{id}")
-    public UserMappingResponse updateUserMapping(
-            @PathVariable UUID id,
-            @RequestBody UserMappingRequest request) {
-        log.debug("Updating User Mapping for ID: {}", id);
-        return userMappingService.updateUserMapping(id, request);
+    }@PutMapping("/update/{id}")
+    public UserMappingResponse updateUserMapping(@PathVariable UUID id, @RequestBody UserMappingRequest request) {
+        log.debug("Updating User Mapping for ID: {}", id);return userMappingService.updateUserMapping(id, request);
     }
 }

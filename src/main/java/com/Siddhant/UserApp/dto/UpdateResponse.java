@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 public class UpdateResponse {
     private String message;
     private RegisterData response;
-
     public UpdateResponse(String userNotFound, Object o) {
     }
 }

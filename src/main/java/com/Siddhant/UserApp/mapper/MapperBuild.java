@@ -1,17 +1,14 @@
 package com.Siddhant.UserApp.mapper;
-
 import com.Siddhant.UserApp.Entity.FarmerProfile;
 import com.Siddhant.UserApp.Entity.Product;
 import com.Siddhant.UserApp.Entity.User;
 import com.Siddhant.UserApp.dto.FarmerResponse;
 import com.Siddhant.UserApp.dto.ProductResponse;
-
 public class MapperBuild {
     public static FarmerResponse buildFarmerResponse(FarmerProfile farmer) {
         if (farmer == null) {return null;}
         FarmerResponse response = new FarmerResponse();
         response.setFarmerId(farmer.getId());
-        
         if (farmer.getUser() != null) {
             User user = farmer.getUser();
             response.setName(user.getName());
@@ -31,23 +28,13 @@ public class MapperBuild {
             response.setInactiveSince(user.getInactiveSince());
             response.setIsDelete(user.getIsDelete());
             response.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
-        }
-        
-        return response;
-    }
-
-    public static ProductResponse buildProductResponse(Product product) {
+            response.setBlockReason(user.getBlockReason());
+            response.setBlockedUntil(user.getBlockedUntil());
+        }return response;
+    }public static ProductResponse buildProductResponse(Product product) {
         if (product == null) {return null;
-        }
-        ProductResponse response = new ProductResponse();
-        // -----------------------------------------------
-        // PRODUCT ID
-        // -----------------------------------------------
+        }ProductResponse response = new ProductResponse();
         response.setProductId(product.getProductId());
-
-        // -----------------------------------------------
-        // FARMER
-        // -----------------------------------------------
         if (product.getFarmer() != null) {
             response.setFarmerId(product.getFarmer().getId());
             if (product.getFarmer().getUser() != null) {
@@ -59,32 +46,15 @@ public class MapperBuild {
                 response.setFarmerActive(user.getIsActive());
                 response.setFarmerInactiveReason(user.getInactiveReason());
             }
-        }
-
-        // -----------------------------------------------
-        // PRODUCT DETAILS
-        // -----------------------------------------------
-        response.setProductName(product.getProductName());
+        }response.setProductName(product.getProductName());
         response.setCategory(product.getCategory());
         response.setPrice(product.getPrice());
         response.setQuantity(product.getQuantity());
         response.setUnit(product.getUnit());
         response.setDescription(product.getDescription());
         response.setHarvestDate(product.getHarvestDate());
-
-        // -----------------------------------------------
-        // IMAGE
-        // -----------------------------------------------
         response.setProductPhoto(product.getProductPhoto());
-
-        // -----------------------------------------------
-        // OPTIONAL VIDEO
-        // -----------------------------------------------
         response.setProductVideo(product.getProductVideo());
-
-        // -----------------------------------------------
-        // AUDIT FIELDS
-        // -----------------------------------------------
         response.setCreatedBy(product.getCreatedBy());
         response.setCreatedOn(product.getCreatedOn());
         response.setUpdatedBy(product.getUpdatedBy());
@@ -94,7 +64,6 @@ public class MapperBuild {
         response.setStatus(product.getStatus());
         response.setAverageRating(product.getAverageRating());
         response.setReviewCount(product.getReviewCount());
-
         return response;
     }
 }

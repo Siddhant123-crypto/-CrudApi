@@ -26,6 +26,8 @@ public class FarmerResponse {
     private LocalDateTime inactiveSince;
     private Boolean isDelete;
     private String status;
+    private String blockReason;
+    private LocalDateTime blockedUntil;
     private String accessToken;
     private Long expiresIn;
 }

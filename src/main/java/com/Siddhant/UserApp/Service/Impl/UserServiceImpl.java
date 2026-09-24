@@ -121,7 +121,7 @@ public class UserServiceImpl implements UserService {
             response.setStatus(user.getStatus());
             response.setProfilePhoto(user.getProfilePhoto());
             
-            String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+            String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), user.getRole().name());
             
             return new RegisterResponse("Registration Successful", response, token, 604800);
         } catch (Exception e) {
@@ -145,6 +145,8 @@ public class UserServiceImpl implements UserService {
             if (!user.getPassword().equals(request.getPassword())) {
                 return new LoginResponse("Incorrect Password", null, null);
             }
+            user.checkAndClearExpiredBlock();
+            
             if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE) {
                 return new LoginResponse("User Account is Blocked by Admin", null, null);
             }
@@ -163,7 +165,7 @@ public class UserServiceImpl implements UserService {
             response.setProfilePhoto(user.getProfilePhoto());
             response.setRole(user.getRole());
             
-            String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+            String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), user.getRole().name());
             LoginResponse tokenResponse = new LoginResponse();
             tokenResponse.setAccessToken(token);
             tokenResponse.setExpiresIn(604800);

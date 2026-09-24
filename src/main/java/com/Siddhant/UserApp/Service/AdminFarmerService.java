@@ -3,6 +3,8 @@ import com.Siddhant.UserApp.dto.admin.AdminFarmGalleryResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmerResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmerSalesResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationListResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationDetailResponse;
 import java.util.List;
 import java.util.UUID;
 public interface AdminFarmerService {
@@ -27,4 +29,9 @@ public interface AdminFarmerService {
     List<AdminFarmGalleryResponse> getFarmGallery(UUID farmerId);
     AdminFarmerResponse requestAdditionalInfo(UUID farmerId, String message);
     AdminFarmVerificationResponse getFarmVerification(UUID farmerId);
+
+    List<AdminFarmVerificationListResponse> getVerificationList();
+    AdminFarmVerificationDetailResponse getVerificationDetails(UUID farmerId);
+    void approveFarmerVerification(UUID farmerId);
+    void rejectFarmerVerification(UUID farmerId, String message);
 }

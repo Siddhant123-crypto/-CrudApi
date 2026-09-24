@@ -23,8 +23,7 @@ public class AuthController {
     public com.Siddhant.UserApp.dto.CheckUserResponse checkUser(
             @jakarta.validation.Valid @RequestBody com.Siddhant.UserApp.dto.CheckUserRequest request) {
         return authService.checkUser(request);
-    }
-    @PostMapping("/google")
+    }@PostMapping("/google")
     public GoogleLoginResponse googleLogin(@RequestBody GoogleLoginRequest request) {
         return authService.googleLogin(request);
     }

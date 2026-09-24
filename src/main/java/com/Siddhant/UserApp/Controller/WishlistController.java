@@ -17,29 +17,22 @@ public class WishlistController {
     @PostMapping("/add/{productId}")
     public ResponseEntity<?> addToWishlist(@PathVariable UUID productId) {
         WishlistResponse wishlist = wishlistService.addToWishlist(productId);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Product added to wishlist successfully");
-        response.put("wishlist", wishlist);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Product added to wishlist successfully");response.put("wishlist", wishlist);
         return ResponseEntity.ok(response);
     }@GetMapping("/my")
     public ResponseEntity<?> getMyWishlist() {
         List<WishlistResponse> wishlist = wishlistService.getMyWishlist();
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Wishlist fetched successfully");
-        response.put("wishlist", wishlist);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Wishlist fetched successfully");response.put("wishlist", wishlist);
         return ResponseEntity.ok(response);
     }@DeleteMapping("/remove/{productId}")
     public ResponseEntity<?> removeFromWishlist(@PathVariable UUID productId) {
         wishlistService.removeFromWishlist(productId);
-        return ResponseEntity.ok(Map.of(
-                "message", "Product removed from wishlist successfully"
+        return ResponseEntity.ok(Map.of("message", "Product removed from wishlist successfully"
         ));
     }@GetMapping("/check/{productId}")
     public ResponseEntity<?> checkWishlist(@PathVariable UUID productId) {
         WishlistCheckResponse wishlist = wishlistService.checkWishlist(productId);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Wishlist status fetched successfully");
-        response.put("wishlist", wishlist);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Wishlist status fetched successfully");response.put("wishlist", wishlist);
         return ResponseEntity.ok(response);
     }
 }

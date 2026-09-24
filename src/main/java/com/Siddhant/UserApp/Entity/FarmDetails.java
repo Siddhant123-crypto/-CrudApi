@@ -53,6 +53,10 @@ public class FarmDetails {
     private Boolean verified = false;
     @Column(name = "verified_on")
     private LocalDateTime verifiedOn;
+    @Column(name = "verification_message")
+    private String verificationMessage;
+    @Column(name = "verification_requested_on")
+    private LocalDateTime verificationRequestedOn;
     @Column(name = "certificate_file")
     private String certificateFile;
 }

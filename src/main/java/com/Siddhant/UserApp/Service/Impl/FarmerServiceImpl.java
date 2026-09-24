@@ -91,7 +91,7 @@ public class FarmerServiceImpl implements FarmerService {
             
             FarmerProfile savedFarmer = farmerProfileRepository.save(farmer);
             
-            String token = jwtService.generateToken(user.getEmail(), Role.FARMER.name());
+            String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), Role.FARMER.name());
             FarmerResponse response = MapperBuild.buildFarmerResponse(savedFarmer);
             response.setAccessToken(token);
             response.setExpiresIn(86400L);
@@ -133,7 +133,9 @@ public class FarmerServiceImpl implements FarmerService {
             user.setMobile(request.getMobile());
             user.setEmail(request.getEmail());
             user.setState(request.getState());
-            user.setPassword(request.getPassword());
+            if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+                user.setPassword(request.getPassword());
+            }
             user.setUpdatedBy(request.getName());
             user.setUpdatedOn(LocalDateTime.now());
             
@@ -186,6 +188,8 @@ public class FarmerServiceImpl implements FarmerService {
             if (!user.getPassword().equals(request.getPassword())) {
                 return new LoginResponse("Incorrect Password", null, null);
             }
+            user.checkAndClearExpiredBlock();
+            
             if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE) {
                 return new LoginResponse("Farmer Account is Blocked by Admin", null, null);
             }
@@ -209,7 +213,7 @@ public class FarmerServiceImpl implements FarmerService {
             
             log.debug("Farmer logged in: {}", user.getEmail());
             LoginResponse tokenResponse = new LoginResponse();
-            String token = jwtService.generateToken(user.getEmail(), Role.FARMER.name());
+            String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), Role.FARMER.name());
             tokenResponse.setAccessToken(token);
             tokenResponse.setExpiresIn(86400); // 24 hours
             tokenResponse.setMessage("Login Successful. Login Count : " + user.getLoginCount());

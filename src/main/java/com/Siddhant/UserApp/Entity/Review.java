@@ -38,8 +38,7 @@ public class Review {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
-    }
-    @PreUpdate
+    }@PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }

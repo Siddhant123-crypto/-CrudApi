@@ -1,5 +1,4 @@
 package com.Siddhant.UserApp.dto.admin;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import java.time.LocalDateTime;

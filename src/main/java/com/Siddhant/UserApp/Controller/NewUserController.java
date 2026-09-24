@@ -17,8 +17,7 @@ public class NewUserController {
     @PostMapping("/login")
     public <NewUserLoginResponse> NewUserLoginResponse login(@RequestBody NewUserLoginRequest request) {
         return (NewUserLoginResponse) newUserService.login(request);
-    }
-    @PostMapping("/google-login")
+    }@PostMapping("/google-login")
     public NewUserLoginResponse googleLogin(@RequestBody Map<String, String> body) {
         return newUserService.googleLogin(body.get("idToken"));
     }

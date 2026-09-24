@@ -122,10 +122,45 @@ public class AdminFarmerController {
             @Valid @RequestBody AdminFarmVerificationRequest request) {AdminFarmerResponse farmer = adminFarmerService.requestAdditionalInfo(farmerId, request.getMessage());
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Additional information requested successfully");response.put("data", farmer);
         return ResponseEntity.ok(response);
-    }@GetMapping("/{farmerId}/verification")
+    }
+    @GetMapping("/{farmerId}/verification")
     public ResponseEntity<Map<String, Object>> getFarmVerification(@PathVariable UUID farmerId) {
         AdminFarmVerificationResponse verification = adminFarmerService.getFarmVerification(farmerId);
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Farm verification details fetched successfully");response.put("data", verification);
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/verification/list")
+    public ResponseEntity<Map<String, Object>> getVerificationList() {
+        List<AdminFarmVerificationListResponse> list = adminFarmerService.getVerificationList();
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Verification list fetched successfully");
+        response.put("data", list);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verification/{farmerId}")
+    public ResponseEntity<Map<String, Object>> getVerificationDetails(@PathVariable UUID farmerId) {
+        AdminFarmVerificationDetailResponse details = adminFarmerService.getVerificationDetails(farmerId);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Verification details fetched successfully");
+        response.put("data", details);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/verification/{farmerId}/approve")
+    public ResponseEntity<Map<String, Object>> approveFarmerVerification(@PathVariable UUID farmerId) {
+        adminFarmerService.approveFarmerVerification(farmerId);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Farmer verification approved successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/verification/{farmerId}/reject")
+    public ResponseEntity<Map<String, Object>> rejectFarmerVerification(@PathVariable UUID farmerId, @Valid @RequestBody AdminFarmVerificationRequest request) {
+        adminFarmerService.rejectFarmerVerification(farmerId, request.getMessage());
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("message", "Farmer verification rejected successfully");
         return ResponseEntity.ok(response);
     }
 }

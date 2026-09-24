@@ -1,5 +1,4 @@
 package com.Siddhant.UserApp.dto;
-import com.Siddhant.UserApp.Entity.Role;
 import com.Siddhant.UserApp.Entity.Status;
 import java.time.LocalDateTime;
 import java.util.UUID;

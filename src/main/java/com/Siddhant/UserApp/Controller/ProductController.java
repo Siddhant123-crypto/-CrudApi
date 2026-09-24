@@ -35,57 +35,41 @@ public class ProductController {
     @PostMapping(value="/save", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     public ProductResponse saveProduct(@RequestPart("data") String data, @RequestPart(value="photo", required=false) MultipartFile photo, @RequestPart(value="video", required=false) MultipartFile video
     ) throws IOException {ProductRequest request = objectMapper.readValue(data, ProductRequest.class);return productService.saveProduct(request, photo, video);
-    }
-    @GetMapping("/getAll")
+    }@GetMapping("/getAll")
     public List<ProductResponse> getAllProducts() {return productService.getAllProducts();
-    }
-    @GetMapping("/getById/{id}")
+    }@GetMapping("/getById/{id}")
     public ProductResponse getProductById(@PathVariable UUID id) {return productService.getProductById(id);
-    }
-    @PutMapping(value="/update/{id}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+    }@PutMapping(value="/update/{id}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     public ProductUpdateResponse updateProduct(@PathVariable UUID id, @RequestPart("data") String data, @RequestPart(value="photo", required=false) MultipartFile photo, @RequestPart(value="video", required=false) MultipartFile video
     ) throws IOException {ProductRequest request = objectMapper.readValue(data, ProductRequest.class);return productService.updateProduct(id, request, photo, video);
-    }
-    @DeleteMapping("/delete/{id}")
+    }@DeleteMapping("/delete/{id}")
     public String deleteProduct(@PathVariable UUID id) {return productService.deleteProduct(id);
-    }
-    @PostMapping("/uploadPhoto/{id}")
+    }@PostMapping("/uploadPhoto/{id}")
     public String uploadPhoto(@PathVariable UUID id, @RequestParam("photo") MultipartFile photo) {return productService.uploadPhoto(id, photo);
-    }
-    @PostMapping("/uploadVideo/{id}")
+    }@PostMapping("/uploadVideo/{id}")
     public String uploadVideo(@PathVariable UUID id, @RequestParam("video") MultipartFile video) {return productService.uploadVideo(id, video);
-    }
-    @GetMapping("/image/{fileName}")
+    }@GetMapping("/image/{fileName}")
     public ResponseEntity<Resource> getImage(@PathVariable String fileName) throws IOException {Path path = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);Resource resource = new UrlResource(path.toUri());if (!resource.exists()) return ResponseEntity.notFound().build();String contentType = Files.probeContentType(path);if (contentType == null) contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType)).header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"").body(resource);
-    }
-
-    @GetMapping("/video/{fileName}")
+    }@GetMapping("/video/{fileName}")
     public ResponseEntity<Resource> getVideo(@PathVariable String fileName) throws IOException {Path path = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);Resource resource = new UrlResource(path.toUri());
         if (!resource.exists()) return ResponseEntity.notFound().build();String contentType = Files.probeContentType(path);
         if (contentType == null) contentType = "video/mp4";return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType)).header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"").body(resource);
-    }
-
-    @GetMapping("/search")
+    }@GetMapping("/search")
     public ResponseEntity<List<ProductResponse>> searchProducts(@RequestParam String keyword
     ) {return ResponseEntity.ok(productService.searchProducts(keyword));
-    }
-    @GetMapping("/price")
+    }@GetMapping("/price")
     public ResponseEntity<List<ProductResponse>> filterByPrice(@RequestParam Double minPrice, @RequestParam Double maxPrice
     ) {return ResponseEntity.ok(productService.filterByPrice(minPrice, maxPrice));
-    }
-    @GetMapping("/filter")
+    }@GetMapping("/filter")
     public ResponseEntity<List<ProductResponse>> filterByCategoryAndPrice(@RequestParam String category, @RequestParam Double minPrice, @RequestParam Double maxPrice
     ) {return ResponseEntity.ok(productService.filterByCategoryAndPrice(category, minPrice, maxPrice));
-    }
-    @GetMapping("/farmer/{farmerId}")
+    }@GetMapping("/farmer/{farmerId}")
     public ResponseEntity<List<ProductResponse>> getProductsByFarmer(@PathVariable UUID farmerId) {return ResponseEntity.ok(
                 productService.getProductsByFarmer(farmerId).stream().map(MapperBuild::buildProductResponse).toList());
-    }
-    @GetMapping("/active")
+    }@GetMapping("/active")
     public List<ProductResponse> getActiveProducts() {return productService.getActiveProducts();
-    }
-    @PatchMapping("/toggleStatus/{id}")
+    }@PatchMapping("/toggleStatus/{id}")
     public ResponseEntity<ProductResponse> toggleProductStatus(@PathVariable UUID id) {
         return ResponseEntity.ok(productService.toggleProductStatus(id));
     }

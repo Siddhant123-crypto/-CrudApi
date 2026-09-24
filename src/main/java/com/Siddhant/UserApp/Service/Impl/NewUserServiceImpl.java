@@ -56,6 +56,7 @@ public class NewUserServiceImpl implements NewUserService {
                 if (!user.getPassword().equals(request.getPassword())) {
                     return new NewUserLoginResponse("Incorrect Password", null);
                 }
+                user.checkAndClearExpiredBlock();
                 if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {
                     return new NewUserLoginResponse("Account Blocked by Admin", null);
                 }
@@ -88,7 +89,7 @@ public class NewUserServiceImpl implements NewUserService {
                 }
                 
                 NewUserLoginResponse response = new NewUserLoginResponse("Login Successful", data);
-                String token = jwtService.generateToken(data.getEmail(), data.getRole());
+                String token = jwtService.generateToken(data.getEmail() != null ? data.getEmail() : user.getMobile(), data.getRole());
                 response.setAccessToken(token);
                 response.setExpiresIn(86400L);
                 
@@ -121,6 +122,7 @@ public class NewUserServiceImpl implements NewUserService {
             
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
+                user.checkAndClearExpiredBlock();
                 if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {
                     return new NewUserLoginResponse("Account Blocked by Admin", null);
                 }
@@ -153,7 +155,7 @@ public class NewUserServiceImpl implements NewUserService {
                 }
                 
                 NewUserLoginResponse response = new NewUserLoginResponse("Login Successful", data);
-                String jwtToken = jwtService.generateToken(data.getEmail(), data.getRole());
+                String jwtToken = jwtService.generateToken(data.getEmail() != null ? data.getEmail() : user.getMobile(), data.getRole());
                 response.setAccessToken(jwtToken);
                 response.setExpiresIn(86400L);
                 return response;

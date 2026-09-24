@@ -4,11 +4,16 @@ import com.Siddhant.UserApp.Repository.FarmGalleryRepository;
 import com.Siddhant.UserApp.Repository.FarmerProfileRepository;
 import com.Siddhant.UserApp.Repository.OrderRepository;
 import com.Siddhant.UserApp.Service.AdminFarmerService;
+import com.Siddhant.UserApp.Service.NotificationService;
 import com.Siddhant.UserApp.dto.admin.AdminFarmGalleryResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmerResponse;
 import com.Siddhant.UserApp.dto.admin.AdminFarmerSalesResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationListResponse;
+import com.Siddhant.UserApp.dto.admin.AdminFarmVerificationDetailResponse;
+import com.Siddhant.UserApp.Repository.FarmDetailsRepository;
 import com.Siddhant.UserApp.enums.OrderStatus;
+import com.Siddhant.UserApp.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
@@ -20,6 +25,8 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
     private final FarmerProfileRepository farmerProfileRepository;
     private final OrderRepository orderRepository;
     private final FarmGalleryRepository farmGalleryRepository;
+    private final NotificationService notificationService;
+    private final FarmDetailsRepository farmDetailsRepository;
     @Override
     public List<AdminFarmerResponse> getAllFarmers() {return farmerProfileRepository.findAll().stream().filter(farmer -> farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER")).map(this::mapToResponse).toList();
     }private AdminFarmerResponse mapToResponse(FarmerProfile farmer) {var user = farmer.getUser();
@@ -38,7 +45,18 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
         return farmerProfileRepository.findByVerifiedTrue().stream().filter(farmer -> farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER")).map(this::mapToResponse).toList();
     }@Override
     public List<AdminFarmerResponse> getBlockedFarmers() {
-        return farmerProfileRepository.findByUser_Status(Status.INACTIVE).stream().filter(farmer -> farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER"))
+        return farmerProfileRepository.findByUser_Status(Status.INACTIVE).stream()
+                .filter(farmer -> {
+                    if (farmer.getUser() != null && farmer.getUser().getRole() != null && farmer.getUser().getRole().name().equals("FARMER")) {
+                        com.Siddhant.UserApp.Entity.Status oldStatus = farmer.getUser().getStatus();
+                        farmer.getUser().checkAndClearExpiredBlock();
+                        if (oldStatus != farmer.getUser().getStatus()) {
+                            // If status changed, we can save it here or it will just be omitted from this response
+                        }
+                        return farmer.getUser().getStatus() == Status.INACTIVE;
+                    }
+                    return false;
+                })
                 .map(this::mapToResponse).toList();
     }@Override
     public AdminFarmerResponse blockFarmer(UUID farmerId, String reason, Integer durationDays) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
@@ -68,6 +86,7 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
         }farmer.setVerified(true);
         farmer.setVerifiedOn(java.time.LocalDateTime.now());farmer.getUser().setStatus(Status.ACTIVE);farmer.getUser().setIsActive(true);
         farmerProfileRepository.save(farmer);
+        notificationService.createNotification(farmer.getUser().getUserId(), "Farm Verified", "Congratulations! Your farm has been verified by the admin.", NotificationType.SYSTEM);
         return mapToResponse(farmer);
     }@Override
     public AdminFarmerResponse deleteFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
@@ -137,11 +156,105 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
     public AdminFarmerResponse requestAdditionalInfo(UUID farmerId, String message) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
         if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");
         }farmer.setVerificationMessage(message);farmer.setVerificationRequestedOn(java.time.LocalDateTime.now());farmerProfileRepository.save(farmer);
+        notificationService.createNotification(farmer.getUser().getUserId(), "Farm Verification Update", message, NotificationType.SYSTEM);
         return mapToResponse(farmer);
-    }@Override
+    }
+    @Override
     public AdminFarmVerificationResponse getFarmVerification(UUID farmerId) {
         FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
-        if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");
-        }return new AdminFarmVerificationResponse(farmer.getId(), farmer.getUser().getName(), farmer.getVerified(), farmer.getVerificationMessage(), farmer.getVerificationRequestedOn());
+        if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");}
+        return new AdminFarmVerificationResponse(farmer.getId(), farmer.getUser().getName(), farmer.getVerified(), farmer.getVerificationMessage(), farmer.getVerificationRequestedOn());
+    }
+
+    @Override
+    public List<AdminFarmVerificationListResponse> getVerificationList() {
+        return farmDetailsRepository.findAll().stream().map(farm -> {
+            String status = "PENDING";
+            if (Boolean.TRUE.equals(farm.getVerified())) {
+                status = "VERIFIED";
+            } else if (farm.getVerificationMessage() != null && !farm.getVerificationMessage().isEmpty()) {
+                status = "REJECTED";
+            }
+            return new AdminFarmVerificationListResponse(
+                farm.getFarmer().getId(),
+                farm.getFarmerName() != null ? farm.getFarmerName() : farm.getFarmer().getUser().getName(),
+                farm.getFarmName(),
+                status,
+                farm.getVerificationRequestedOn()
+            );
+        }).toList();
+    }
+
+    @Override
+    public AdminFarmVerificationDetailResponse getVerificationDetails(UUID farmerId) {
+        FarmDetails farm = farmDetailsRepository.findByFarmerId(farmerId)
+                .orElseThrow(() -> new RuntimeException("Farm details not found for farmer"));
+        
+        var user = farm.getFarmer().getUser();
+        AdminFarmVerificationDetailResponse response = new AdminFarmVerificationDetailResponse();
+        response.setFarmerId(farm.getFarmer().getId());
+        response.setName(user.getName());
+        response.setMobile(user.getMobile());
+        response.setLocation(farm.getLocation());
+        response.setEmail(user.getEmail());
+        response.setVillage(user.getVillage());
+        response.setState(user.getState());
+        response.setProfilePhoto(user.getProfilePhoto());
+        response.setFarmName(farm.getFarmName());
+        response.setTagline(farm.getTagline());
+        response.setFarmingType(farm.getFarmingType());
+        response.setFarmArea(farm.getFarmArea());
+        response.setFarmAreaUnit(farm.getFarmAreaUnit());
+        response.setMainCrops(farm.getMainCrops());
+        response.setExperienceYears(farm.getYearsExperience());
+        response.setFarmingSince(farm.getFarmingSince());
+        response.setCropsGrownCount(farm.getCropsGrownCount());
+        response.setHappyCustomersCount(farm.getHappyCustomersCount());
+        response.setIrrigationSource(farm.getIrrigationSource());
+        response.setSoilType(farm.getSoilType());
+        response.setAboutFarm(farm.getAboutFarm());
+        response.setCertificateFile(farm.getCertificateFile());
+        response.setFarmVideo(farm.getFarmVideo());
+        response.setVerified(farm.getVerified());
+        response.setVerifiedOn(farm.getVerifiedOn());
+        response.setVerificationMessage(farm.getVerificationMessage());
+        
+        return response;
+    }
+
+    @Override
+    public void approveFarmerVerification(UUID farmerId) {
+        FarmDetails farm = farmDetailsRepository.findByFarmerId(farmerId)
+                .orElseThrow(() -> new RuntimeException("Farm details not found"));
+        
+        farm.setVerified(true);
+        farm.setVerifiedOn(java.time.LocalDateTime.now());
+        farm.setVerificationMessage(null);
+        farmDetailsRepository.save(farm);
+        
+        notificationService.createNotification(
+            farm.getFarmer().getUser().getUserId(), 
+            "Farm Verified", 
+            "Congratulations! Your farm has been verified by the admin.", 
+            NotificationType.SYSTEM
+        );
+    }
+
+    @Override
+    public void rejectFarmerVerification(UUID farmerId, String message) {
+        FarmDetails farm = farmDetailsRepository.findByFarmerId(farmerId)
+                .orElseThrow(() -> new RuntimeException("Farm details not found"));
+        
+        farm.setVerified(false);
+        farm.setVerificationMessage(message);
+        farm.setVerifiedOn(null);
+        farmDetailsRepository.save(farm);
+        
+        notificationService.createNotification(
+            farm.getFarmer().getUser().getUserId(), 
+            "Farm Verification Update", 
+            message, 
+            NotificationType.SYSTEM
+        );
     }
 }

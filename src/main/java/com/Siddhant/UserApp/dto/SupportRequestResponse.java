@@ -1,11 +1,9 @@
 package com.Siddhant.UserApp.dto;
-
 import com.Siddhant.UserApp.enums.SupportRequestStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-
 @Data
 public class SupportRequestResponse {
     private UUID supportRequestId;

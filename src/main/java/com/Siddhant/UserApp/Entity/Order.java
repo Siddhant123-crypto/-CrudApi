@@ -22,8 +22,7 @@ public class Order {
             name = "order_number",
             nullable = false,
             unique = true
-    )
-    private String orderNumber;
+    ) private String orderNumber;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private User customer;
@@ -48,27 +47,16 @@ public class Order {
     private LocalDateTime createdOn;
     private LocalDateTime updatedOn;
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true
-    )
-    private List<OrderItem> orderItems = new ArrayList<>();
+    ) private List<OrderItem> orderItems = new ArrayList<>();
     @PrePersist
     protected void onCreate() {
-        if (orderNumber == null || orderNumber.isBlank()) {
-            orderNumber = "ORD-" + UUID.randomUUID();
+        if (orderNumber == null || orderNumber.isBlank()) {orderNumber = "ORD-" + UUID.randomUUID();
+        }if (createdOn == null) {createdOn = LocalDateTime.now();
+        }if (updatedOn == null) {updatedOn = LocalDateTime.now();
+        }if (status == null) {status = OrderStatus.PENDING;
+        }if (totalAmount == null) {totalAmount = BigDecimal.ZERO;
         }
-        if (createdOn == null) {
-            createdOn = LocalDateTime.now();
-        }
-        if (updatedOn == null) {
-            updatedOn = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = OrderStatus.PENDING;
-        }
-        if (totalAmount == null) {
-            totalAmount = BigDecimal.ZERO;
-        }
-    }
-    @PreUpdate
+    }@PreUpdate
     protected void onUpdate() {
         updatedOn = LocalDateTime.now();
     }
@@ -78,15 +66,12 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
     private String transactionId;
-
     public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
     }
-
     public String getCancellationReason() {
         return cancellationReason;
     }
-
     public void setCancellationReason(String cancellationReason) {
         this.cancellationReason = cancellationReason;
     }

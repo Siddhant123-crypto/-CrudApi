@@ -27,7 +27,6 @@ public class Product {
     @Column(length = 500)
     private String description;
     private String productPhoto;
-    // Optional
     private String productVideo;
     private String createdBy;
     private LocalDateTime createdOn;

@@ -64,15 +64,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         boolean isSupportPath = path.startsWith("/support");
                         isValidUser = userRepository.findFirstByEmail(username)
                             .map(user -> {
-                                boolean isActive = user.getStatus() != com.Siddhant.UserApp.Entity.Status.INACTIVE;
+                                com.Siddhant.UserApp.Entity.Status oldStatus = user.getStatus();
+                                user.checkAndClearExpiredBlock();
+                                if (oldStatus != user.getStatus()) {
+                                    userRepository.save(user);
+                                }
                                 boolean isNotDeleted = user.getIsDelete() == null || !user.getIsDelete();
-                                return (isActive || isSupportPath) && isNotDeleted;
+                                return isNotDeleted;
                             })
                             .orElseGet(() -> userRepository.findFirstByMobile(username)
                                 .map(user -> {
-                                    boolean isActive = user.getStatus() != com.Siddhant.UserApp.Entity.Status.INACTIVE;
+                                    com.Siddhant.UserApp.Entity.Status oldStatus = user.getStatus();
+                                    user.checkAndClearExpiredBlock();
+                                    if (oldStatus != user.getStatus()) {
+                                        userRepository.save(user);
+                                    }
                                     boolean isNotDeleted = user.getIsDelete() == null || !user.getIsDelete();
-                                    return (isActive || isSupportPath) && isNotDeleted;
+                                    return isNotDeleted;
                                 })
                                 .orElse(false));
                     }if (isValidUser) {

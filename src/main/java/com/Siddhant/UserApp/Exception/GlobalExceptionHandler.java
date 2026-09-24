@@ -12,10 +12,10 @@ import java.util.Map;
 public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGlobalException(Exception ex) {
-        ex.printStackTrace(); // Log stack trace to server console
-        Map<String, String> response = new HashMap<>();
-        response.put("error", ex.getMessage());
-        response.put("message", ex.getMessage());
+        if (ex.getClass().getName().contains("ClientAbortException") || (ex.getMessage() != null && ex.getMessage().contains("Connection reset by peer"))) {
+            return null;
+        }ex.printStackTrace();
+        Map<String, String> response = new HashMap<>();response.put("error", ex.getMessage());response.put("message", ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

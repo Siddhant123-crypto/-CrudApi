@@ -87,7 +87,7 @@ public class AuthServiceImpl implements AuthService {
                 }
                 
                 LoginResponse response = new LoginResponse();
-                String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+                String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), user.getRole().name());
                 response.setAccessToken(token);
                 response.setExpiresIn(86400);
                 response.setMessage("Login Successful");
@@ -168,7 +168,7 @@ public class AuthServiceImpl implements AuthService {
                     data.setUserId(user.getUserId());
                 }
                 
-                String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+                String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), user.getRole().name());
                 return new GoogleLoginResponse("Login Successful", data, token, 604800L);
             }
             
