@@ -35,6 +35,21 @@ public class SupportMessageServiceImpl implements SupportMessageService {
     @Override
     public List<SupportMessageDto> getMessagesForSupportRequest(UUID supportRequestId, String roleStr) {
         boolean isAdmin = "ADMIN".equalsIgnoreCase(roleStr);
+        
+        if (isAdmin) {
+            String currentUsername = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            supportRequestRepository.findById(supportRequestId).ifPresent(req -> {
+                if (Boolean.TRUE.equals(req.getHasUnreadTransfer())) {
+                    adminRepository.findByEmail(currentUsername).ifPresent(admin -> {
+                        if (req.getAssignedAdminId() != null && req.getAssignedAdminId().equals(admin.getId())) {
+                            req.setHasUnreadTransfer(false);
+                            supportRequestRepository.save(req);
+                        }
+                    });
+                }
+            });
+        }
+        
         return supportMessageRepository.findBySupportRequest_SupportRequestIdOrderByCreatedAtAsc(supportRequestId)
                 .stream()
                 .filter(msg -> {
@@ -66,6 +81,9 @@ public class SupportMessageServiceImpl implements SupportMessageService {
             // If admin replies, we can move it to IN_PROGRESS if it was OPEN
             if (request.getStatus() == SupportRequestStatus.OPEN) {
                 request.setStatus(SupportRequestStatus.IN_PROGRESS);
+                if (request.getAssignedAdminId() == null) {
+                    request.setAssignedAdminId(admin.getId());
+                }
                 supportRequestRepository.save(request);
             }
         } else {
@@ -80,6 +98,14 @@ public class SupportMessageServiceImpl implements SupportMessageService {
             senderId = user.getUserId();
             senderType = user.getRole();
             senderName = user.getName() != null ? user.getName() : "User";
+            
+            // If user replies to a RESOLVED request, move it back to IN_PROGRESS so admin sees it
+            if (request.getStatus() == SupportRequestStatus.RESOLVED) {
+                request.setStatus(SupportRequestStatus.IN_PROGRESS);
+                request.setResolvedBy(null);
+                request.setResolvedAt(null);
+                supportRequestRepository.save(request);
+            }
         }
 
         SupportMessage supportMessage = new SupportMessage();
@@ -89,6 +115,10 @@ public class SupportMessageServiceImpl implements SupportMessageService {
         supportMessage.setSenderType(senderType);
         
         SupportMessage savedMessage = supportMessageRepository.save(supportMessage);
+
+        // Update the parent SupportRequest's updatedAt timestamp so it bubbles to the top of the inbox
+        request.setUpdatedAt(java.time.LocalDateTime.now());
+        supportRequestRepository.save(request);
 
         // Send notification
         if ("ADMIN".equalsIgnoreCase(roleStr)) {
@@ -102,19 +132,27 @@ public class SupportMessageServiceImpl implements SupportMessageService {
             notifReq.setMessage("Admin: " + previewMessage);
             notifReq.setNotificationType(NotificationType.ADMIN);
             
-            // Commenting out generic notification because support chat has its own isolated unread count logic
-            // notificationService.sendNotification(notifReq);
+            // Send notification specifically for support chat reply
+            notificationService.sendNotification(notifReq);
         } else {
-            NotificationSendRequest notifReq = new NotificationSendRequest();
-            notifReq.setReceiverType("ADMIN");
-            notifReq.setReceiverId(null);
-            notifReq.setTitle("Message from " + senderName);
-            
-            String previewMessage = message.length() > 200 ? message.substring(0, 197) + "..." : message;
-            notifReq.setMessage(senderName + ": " + previewMessage);
-            notifReq.setNotificationType(NotificationType.ADMIN);
-            // Commenting out generic notification because support chat has its own isolated unread count logic
-            // notificationService.sendNotification(notifReq);
+            // Only send generic notification if the request is UNASSIGNED
+            if (request.getAssignedAdminId() == null) {
+                NotificationSendRequest notifReq = new NotificationSendRequest();
+                notifReq.setReceiverType("ADMIN");
+                notifReq.setReceiverId(null); // broadcast to all admins
+                notifReq.setTitle("New Support Request from " + senderName);
+                
+                String previewMessage = message.length() > 200 ? message.substring(0, 197) + "..." : message;
+                notifReq.setMessage(senderName + ": " + previewMessage);
+                notifReq.setNotificationType(NotificationType.ADMIN);
+                
+                notificationService.sendNotification(notifReq);
+            } else {
+                // Also trigger notification specifically to the assigned admin so they get an alert/red dot via NotificationContext?
+                // Actually the frontend polls /support/admin/unread-counts for the red dot.
+            }
+            // If ASSIGNED, do NOT call generic notification service.
+            // The assigned admin will simply see it in their Support Inbox unread counts.
         }
 
         return mapToDto(savedMessage);
@@ -126,22 +164,53 @@ public class SupportMessageServiceImpl implements SupportMessageService {
 
     @Override
     public java.util.Map<UUID, Long> getUnreadCountsForAdmin() {
-        List<Object[]> results = supportMessageRepository.countUnreadMessagesGroupedByFarmerProfile(Role.FARMER);
+        List<Object[]> results = supportMessageRepository.countUnreadMessagesGroupedByUserId();
         java.util.Map<UUID, Long> counts = new java.util.HashMap<>();
         for (Object[] result : results) {
-            UUID farmerProfileId = (UUID) result[0];
+            UUID userId = (UUID) result[0];
             Long count = (Long) result[1];
-            counts.put(farmerProfileId, count);
+            counts.put(userId, count);
         }
         return counts;
     }
 
     @Override
+    public long getUnassignedUnreadCount() {
+        return supportRequestRepository.countUnassignedActiveRequests();
+    }
+
+    @Override
+    public long getMyAssignedUnreadCount() {
+        Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof String) {
+            String email = (String) principal;
+            return adminRepository.findByEmail(email).map(admin -> {
+                long messageUnread = supportMessageRepository.countMyAssignedUnreadMessages(admin.getId());
+                long transferUnread = supportRequestRepository.countUnreadTransfersByAdminId(admin.getId());
+                return messageUnread + transferUnread;
+            }).orElse(0L);
+        }
+        return 0;
+    }
+
+    @Override
+    public long getBlockedFarmerUnreadCount() {
+        return supportMessageRepository.countBlockedUnreadMessages();
+    }
+
+    @Override
     public void markMessagesAsRead(UUID supportRequestId, String roleStr) {
         if ("ADMIN".equalsIgnoreCase(roleStr)) {
-            supportMessageRepository.markMessagesAsRead(supportRequestId, Role.FARMER);
+            supportMessageRepository.markMessagesAsRead(supportRequestId);
+            // Clear transfer unread status
+            supportRequestRepository.findById(supportRequestId).ifPresent(req -> {
+                if (Boolean.TRUE.equals(req.getHasUnreadTransfer())) {
+                    req.setHasUnreadTransfer(false);
+                    supportRequestRepository.save(req);
+                }
+            });
         } else {
-            supportMessageRepository.markMessagesAsRead(supportRequestId, Role.ADMIN);
+            supportMessageRepository.markAdminMessagesAsRead(supportRequestId);
         }
     }
     

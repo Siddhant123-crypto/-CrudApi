@@ -10,6 +10,9 @@ public interface SupportMessageService {
 
     long getUnreadCountForFarmer(UUID farmerId);
     java.util.Map<UUID, Long> getUnreadCountsForAdmin();
+    long getUnassignedUnreadCount();
+    long getMyAssignedUnreadCount();
+    long getBlockedFarmerUnreadCount();
 
     void markMessagesAsRead(UUID supportRequestId, String role);
     void deleteMessage(UUID messageId, String roleStr);

@@ -28,10 +28,8 @@ public class Cart {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {createdAt = LocalDateTime.now();
-        }
-        if (updatedAt == null) {updatedAt = LocalDateTime.now();
-        }
-        if (totalAmount == null) {totalAmount = BigDecimal.ZERO;
+        }if (updatedAt == null) {updatedAt = LocalDateTime.now();
+        }if (totalAmount == null) {totalAmount = BigDecimal.ZERO;
         }
     }@PreUpdate
     protected void onUpdate() {updatedAt = LocalDateTime.now();

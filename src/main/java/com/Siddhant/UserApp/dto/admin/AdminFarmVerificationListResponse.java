@@ -13,5 +13,6 @@ public class AdminFarmVerificationListResponse {
     private String farmerName;
     private String farmName;
     private String status; // PENDING, VERIFIED, REJECTED
+    private String verifiedBy;
     private LocalDateTime verificationRequestedOn;
 }

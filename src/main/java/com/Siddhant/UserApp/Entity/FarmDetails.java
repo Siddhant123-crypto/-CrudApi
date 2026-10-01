@@ -51,6 +51,8 @@ public class FarmDetails {
     private String farmVideo;
     @Column(name = "verified")
     private Boolean verified = false;
+    @Column(name = "verified_by_admin")
+    private String verifiedByAdmin;
     @Column(name = "verified_on")
     private LocalDateTime verifiedOn;
     @Column(name = "verification_message")

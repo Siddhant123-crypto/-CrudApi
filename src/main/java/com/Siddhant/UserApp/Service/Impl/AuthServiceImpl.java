@@ -33,7 +33,6 @@ public class AuthServiceImpl implements AuthService {
     private final FarmerProfileRepository farmerProfileRepository;
     private final UserRepository userRepository;
     private final com.Siddhant.UserApp.Service.JwtService jwtService;
-
     @Value("${google.client-id}")
     private String googleClientId;
 
@@ -169,7 +168,8 @@ public class AuthServiceImpl implements AuthService {
                 }
                 
                 String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), user.getRole().name());
-                return new GoogleLoginResponse("Login Successful", data, token, 604800L);
+                GoogleLoginResponse response = new GoogleLoginResponse("Login Successful", data, token, 604800L);
+                return response;
             }
             
             log.info("New Google User: {}", email);

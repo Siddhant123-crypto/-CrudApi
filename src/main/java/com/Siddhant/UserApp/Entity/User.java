@@ -52,7 +52,6 @@ public class User {
     private String createdBy;
     private String updatedBy;
     private LocalDateTime lastLogin;
-    
     public void checkAndClearExpiredBlock() {
         if (this.status == Status.INACTIVE && this.blockedUntil != null) {
             java.time.LocalDate currentDate = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).toLocalDate();

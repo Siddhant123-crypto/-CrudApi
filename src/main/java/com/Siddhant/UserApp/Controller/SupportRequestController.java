@@ -43,40 +43,29 @@ public class SupportRequestController {
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Messages fetched successfully");response.put("data", messages);
         return ResponseEntity.ok(response);
     }@PostMapping("/{supportRequestId}/messages")
-    public ResponseEntity<Map<String, Object>> sendMessage(@PathVariable UUID supportRequestId, @Valid @RequestBody SendSupportMessageRequest request) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        SupportMessageDto sent = supportMessageService.sendMessage(supportRequestId, request.getMessage(), username, role);
+    public ResponseEntity<Map<String, Object>> sendMessage(@PathVariable UUID supportRequestId, @Valid @RequestBody SendSupportMessageRequest request) {String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");SupportMessageDto sent = supportMessageService.sendMessage(supportRequestId, request.getMessage(), username, role);
         Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Message sent successfully");response.put("data", sent);
         return ResponseEntity.ok(response);
     }@GetMapping("/unread-count")
-    public ResponseEntity<Map<String, Object>> getUnreadCount() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+    public ResponseEntity<Map<String, Object>> getUnreadCount() {String username = SecurityContextHolder.getContext().getAuthentication().getName();
         com.Siddhant.UserApp.Entity.User user = userRepository.findFirstByEmail(username)
-                .orElseGet(() -> userRepository.findFirstByMobile(username).orElseThrow(() -> new RuntimeException("User not found")));
-        long count = supportMessageService.getUnreadCountForFarmer(user.getUserId());
-        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Unread count fetched successfully");response.put("data", count);
+                .orElseGet(() -> userRepository.findFirstByMobile(username).orElseThrow(() -> new RuntimeException("User not found")));long count = supportMessageService.getUnreadCountForFarmer(user.getUserId());Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Unread count fetched successfully");response.put("data", count);
         return ResponseEntity.ok(response);
     }@GetMapping("/admin/unread-counts")
     public ResponseEntity<Map<String, Object>> getUnreadCountsForAdmin() {
-        Map<UUID, Long> counts = supportMessageService.getUnreadCountsForAdmin();
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Admin unread counts fetched successfully");
-        response.put("data", counts);
-        return ResponseEntity.ok(response);
+        Map<UUID, Long> userCounts = supportMessageService.getUnreadCountsForAdmin();long unassignedCount = supportMessageService.getUnassignedUnreadCount();long myAssignedCount = supportMessageService.getMyAssignedUnreadCount();
+        long blockedFarmerCount = supportMessageService.getBlockedFarmerUnreadCount();Map<String, Object> countsData = new LinkedHashMap<>();countsData.put("userCounts", userCounts);countsData.put("unassignedCount", unassignedCount);countsData.put("myAssignedCount", myAssignedCount);countsData.put("blockedFarmerCount", blockedFarmerCount);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Admin unread counts fetched successfully");response.put("data", countsData);return ResponseEntity.ok(response);
     }@PutMapping("/{supportRequestId}/messages/read")
     public ResponseEntity<Map<String, Object>> markMessagesAsRead(@PathVariable UUID supportRequestId) {
         String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        supportMessageService.markMessagesAsRead(supportRequestId, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Messages marked as read");
+        supportMessageService.markMessagesAsRead(supportRequestId, role);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Messages marked as read");
         return ResponseEntity.ok(response);
     }@DeleteMapping("/{supportRequestId}/messages/{messageId}")
     public ResponseEntity<Map<String, Object>> deleteMessage(@PathVariable UUID supportRequestId, @PathVariable UUID messageId) {
         String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        supportMessageService.deleteMessage(messageId, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Message deleted successfully");
+        supportMessageService.deleteMessage(messageId, role);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Message deleted successfully");
         return ResponseEntity.ok(response);
     }
 }

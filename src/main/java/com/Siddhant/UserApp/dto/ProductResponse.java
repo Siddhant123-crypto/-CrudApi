@@ -21,7 +21,6 @@ public class ProductResponse {
     private String description;
     private String productPhoto;
     private String harvestDate;
-    // Optional product video
     private String productVideo;
     private Boolean farmerActive;
     private String farmerInactiveReason;

@@ -13,23 +13,14 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
-
     Optional<User> findFirstByEmail(String email);
-
     Optional<User> findByMobile(String mobile);
-
     Optional<User> findFirstByMobile(String mobile);
-
     Optional<User> findByEmailAndPassword(String email, String password);
-
     Optional<User> findByUserId(UUID userId);
-
     List<User> findByRoleAndStatusAndIsActiveTrue(Role role, Status status);
-
     List<User> findByRoleAndIsActiveTrue(Role role);
-
     List<User> findByRoleAndStatusAndIsActiveFalse(Role role, Status status);
-
     @Query("""
     SELECT u FROM User u
     WHERE u.role = com.Siddhant.UserApp.Entity.Role.CUSTOMER
@@ -38,26 +29,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
         OR u.mobile LIKE CONCAT('%', :keyword, '%')
     )
-""")
-    List<User> searchCustomers(@Param("keyword") String keyword);
-
+""") List<User> searchCustomers(@Param("keyword") String keyword);
     @Query("""
     SELECT u FROM User u
     WHERE u.role = com.Siddhant.UserApp.Entity.Role.CUSTOMER
     AND (:state IS NULL OR LOWER(u.state) = LOWER(:state))
     AND (:status IS NULL OR u.status = :status)
-""")
-    List<User> filterCustomers(
+""") List<User> filterCustomers(
             @Param("state") String state,
             @Param("status") Status status
-    );
-    long countByRole(Role role);
-
+    );long countByRole(Role role);
     long countByRoleAndStatus(Role role, Status status);
-
     long countByRoleAndIsActiveTrue(Role role);
-
     long countByRoleAndIsActiveFalse(Role role);
-
     List<User> findTop5ByRoleInOrderByCreatedOnDesc(List<Role> roles);
 }

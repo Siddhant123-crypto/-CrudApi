@@ -15,4 +15,7 @@ public class SupportRequestResponse {
     private SupportRequestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private UUID assignedAdminId;
+    private String transferredByAdminName;
+    private Boolean hasUnreadTransfer;
 }

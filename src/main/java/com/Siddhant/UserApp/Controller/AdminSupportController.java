@@ -25,82 +25,87 @@ public class AdminSupportController {
     private final SupportRequestService supportRequestService;
     private final SupportMessageService supportMessageService;
     private final com.Siddhant.UserApp.Repository.FarmerProfileRepository farmerProfileRepository;
+    private final com.Siddhant.UserApp.Repository.AdminRepository adminRepository;
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllSupportRequests() {
         List<SupportRequestResponse> requests = supportRequestService.getAllSupportRequests();
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "All support requests fetched successfully");
-        response.put("data", requests);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "All support requests fetched successfully");response.put("data", requests);
         return ResponseEntity.ok(response);
     }@GetMapping("/{supportRequestId}")
     public ResponseEntity<Map<String, Object>> getSupportRequestById(@PathVariable UUID supportRequestId) {
         SupportRequestResponse request = supportRequestService.getSupportRequestById(supportRequestId);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Support request fetched successfully");
-        response.put("data", request);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Support request fetched successfully");response.put("data", request);
         return ResponseEntity.ok(response);
+    }@GetMapping("/unassigned")
+    public ResponseEntity<Map<String, Object>> getUnassignedSupportRequests() {
+        List<SupportRequestResponse> requests = supportRequestService.getUnassignedSupportRequests();
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Unassigned support requests fetched successfully");response.put("data", requests);
+        return ResponseEntity.ok(response);
+    }@GetMapping("/my-assigned")
+    public ResponseEntity<Map<String, Object>> getMyAssignedSupportRequests() {
+        List<SupportRequestResponse> requests = supportRequestService.getMyAssignedSupportRequests();
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Assigned support requests fetched successfully");response.put("data", requests);
+        return ResponseEntity.ok(response);
+    }@GetMapping("/resolved")
+    public ResponseEntity<Map<String, Object>> getResolvedSupportRequests() {
+        List<SupportRequestResponse> requests = supportRequestService.getResolvedSupportRequests();
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Resolved support requests fetched successfully");response.put("data", requests);
+        return ResponseEntity.ok(response);
+    }@PostMapping("/{supportRequestId}/assign")
+    public ResponseEntity<Map<String, Object>> assignToMe(@PathVariable UUID supportRequestId) {
+        SupportRequestResponse updated = supportRequestService.assignToMe(supportRequestId);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Support request assigned successfully");response.put("data", updated);
+        return ResponseEntity.ok(response);
+    }@PostMapping("/{supportRequestId}/transfer")
+    public ResponseEntity<Map<String, Object>> transferToAdmin(@PathVariable UUID supportRequestId, @RequestParam UUID newAdminId) {
+        SupportRequestResponse updated = supportRequestService.transferToAdmin(supportRequestId, newAdminId);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Support request transferred successfully");response.put("data", updated);
+        return ResponseEntity.ok(response);
+    }@PostMapping("/{supportRequestId}/resolve")
+    public ResponseEntity<Map<String, Object>> resolveSupportRequest(@PathVariable UUID supportRequestId) {
+        SupportRequestResponse updated = supportRequestService.resolveSupportRequest(supportRequestId);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Support request resolved successfully");response.put("data", updated);
+        return ResponseEntity.ok(response);
+    }@GetMapping("/admins")
+    public ResponseEntity<Map<String, Object>> getAvailableAdmins() {
+        List<Map<String, String>> adminList = adminRepository.findAll().stream().map(a -> {Map<String, String> map = new LinkedHashMap<>();map.put("id", a.getId().toString());
+            map.put("name", a.getName());
+            return map;
+        }).toList();Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Admins fetched successfully");response.put("data", adminList);return ResponseEntity.ok(response);
     }@PutMapping("/{supportRequestId}/status")
     public ResponseEntity<Map<String, Object>> updateSupportRequestStatus(
             @PathVariable UUID supportRequestId,
-            @Valid @RequestBody SupportStatusUpdateRequest request) {
-        SupportRequestResponse updated = supportRequestService.updateSupportRequestStatus(supportRequestId, request.getStatus());
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Support request status updated successfully");
-        response.put("data", updated);
+            @Valid @RequestBody SupportStatusUpdateRequest request) {SupportRequestResponse updated = supportRequestService.updateSupportRequestStatus(supportRequestId, request.getStatus());Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Support request status updated successfully");response.put("data", updated);
         return ResponseEntity.ok(response);
     }@GetMapping("/farmer/{farmerId}/active")
     public ResponseEntity<Map<String, Object>> getActiveSupportRequestForFarmer(@PathVariable UUID farmerId) {
-        UUID userId = farmerProfileRepository.findById(farmerId)
-                .map(f -> f.getUser().getUserId())
-                .orElse(farmerId);
+        UUID userId = farmerProfileRepository.findById(farmerId).map(f -> f.getUser().getUserId()).orElse(farmerId);
         List<SupportRequestResponse> allRequests = supportRequestService.getAllSupportRequests();
-        Optional<SupportRequestResponse> activeRequest = allRequests.stream()
-                .filter(r -> r.getUserId() != null && r.getUserId().equals(userId) 
-                        && (SupportRequestStatus.OPEN.equals(r.getStatus()) || SupportRequestStatus.IN_PROGRESS.equals(r.getStatus())))
-                .max((r1, r2) -> {
-                    if (r1.getCreatedAt() == null && r2.getCreatedAt() == null) return 0;
-                    if (r1.getCreatedAt() == null) return -1;
-                    if (r2.getCreatedAt() == null) return 1;
+        Optional<SupportRequestResponse> activeRequest = allRequests.stream().filter(r -> r.getUserId() != null && r.getUserId().equals(userId) && (SupportRequestStatus.OPEN.equals(r.getStatus()) || SupportRequestStatus.IN_PROGRESS.equals(r.getStatus()))).max((r1, r2) -> {if (r1.getCreatedAt() == null && r2.getCreatedAt() == null) return 0;if (r1.getCreatedAt() == null) return -1;if (r2.getCreatedAt() == null) return 1;
                     return r1.getCreatedAt().compareTo(r2.getCreatedAt());
-                });
-        Map<String, Object> response = new LinkedHashMap<>();
-        if (activeRequest.isPresent()) {
-            response.put("message", "Active support request found");
-            response.put("data", activeRequest.get());
-        } else {
-            response.put("message", "No active support request found");
-            response.put("data", null);
+                });Map<String, Object> response = new LinkedHashMap<>();
+        if (activeRequest.isPresent()) {response.put("message", "Active support request found");response.put("data", activeRequest.get());
+        } else {response.put("message", "No active support request found");response.put("data", null);
         }return ResponseEntity.ok(response);
     }@GetMapping("/{supportRequestId}/messages")
     public ResponseEntity<Map<String, Object>> getMessages(@PathVariable UUID supportRequestId) {
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        List<SupportMessageDto> messages = supportMessageService.getMessagesForSupportRequest(supportRequestId, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Messages fetched successfully");
-        response.put("data", messages);
+        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");List<SupportMessageDto> messages = supportMessageService.getMessagesForSupportRequest(supportRequestId, role);
+        Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Messages fetched successfully");response.put("data", messages);
         return ResponseEntity.ok(response);
     }@PostMapping("/{supportRequestId}/messages")
     public ResponseEntity<Map<String, Object>> sendMessage(@PathVariable UUID supportRequestId, @Valid @RequestBody SendSupportMessageRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        SupportMessageDto sent = supportMessageService.sendMessage(supportRequestId, request.getMessage(), username, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Message sent successfully");
-        response.put("data", sent);
+        SupportMessageDto sent = supportMessageService.sendMessage(supportRequestId, request.getMessage(), username, role);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Message sent successfully");response.put("data", sent);
         return ResponseEntity.ok(response);
     }@PutMapping("/{supportRequestId}/messages/read")
     public ResponseEntity<Map<String, Object>> markMessagesAsRead(@PathVariable UUID supportRequestId) {
         String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        supportMessageService.markMessagesAsRead(supportRequestId, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Messages marked as read");
+        supportMessageService.markMessagesAsRead(supportRequestId, role);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Messages marked as read");
         return ResponseEntity.ok(response);
     }@DeleteMapping("/{supportRequestId}/messages/{messageId}")
     public ResponseEntity<Map<String, Object>> deleteMessage(@PathVariable UUID supportRequestId, @PathVariable UUID messageId) {
         String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        supportMessageService.deleteMessage(messageId, role);
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", "Message deleted successfully");
+        supportMessageService.deleteMessage(messageId, role);Map<String, Object> response = new LinkedHashMap<>();response.put("message", "Message deleted successfully");
         return ResponseEntity.ok(response);
     }
 }

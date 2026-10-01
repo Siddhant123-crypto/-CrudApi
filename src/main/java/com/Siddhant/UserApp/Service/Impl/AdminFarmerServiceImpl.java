@@ -81,11 +81,27 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
         farmer.getUser().setBlockedUntil(null);
         farmerProfileRepository.save(farmer);return mapToResponse(farmer);
     }@Override
-    public AdminFarmerResponse verifyFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
-        if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {throw new RuntimeException("Farmer not found");
-        }farmer.setVerified(true);
-        farmer.setVerifiedOn(java.time.LocalDateTime.now());farmer.getUser().setStatus(Status.ACTIVE);farmer.getUser().setIsActive(true);
+    public AdminFarmerResponse verifyFarmer(UUID farmerId) {
+        FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));
+        if (farmer.getUser() == null || farmer.getUser().getRole() != Role.FARMER) {
+            throw new RuntimeException("Farmer not found");
+        }
+        farmer.setVerified(true);
+        farmer.setVerifiedOn(java.time.LocalDateTime.now());
+        farmer.getUser().setStatus(Status.ACTIVE);
+        farmer.getUser().setIsActive(true);
         farmerProfileRepository.save(farmer);
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = (auth != null) ? auth.getName() : "Unknown Admin";
+
+        farmDetailsRepository.findByFarmerId(farmerId).ifPresent(farm -> {
+            farm.setVerified(true);
+            farm.setVerifiedOn(java.time.LocalDateTime.now());
+            farm.setVerifiedByAdmin(adminEmail);
+            farmDetailsRepository.save(farm);
+        });
+
         notificationService.createNotification(farmer.getUser().getUserId(), "Farm Verified", "Congratulations! Your farm has been verified by the admin.", NotificationType.SYSTEM);
         return mapToResponse(farmer);
     }@Override
@@ -175,11 +191,27 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
             } else if (farm.getVerificationMessage() != null && !farm.getVerificationMessage().isEmpty()) {
                 status = "REJECTED";
             }
+
+            UUID farmerId = null;
+            String farmerName = farm.getFarmerName();
+            
+            if (farm.getFarmer() != null) {
+                farmerId = farm.getFarmer().getId();
+                if (farmerName == null && farm.getFarmer().getUser() != null) {
+                    farmerName = farm.getFarmer().getUser().getName();
+                }
+            }
+            
+            if (farmerName == null) {
+                farmerName = "Unknown Farmer";
+            }
+
             return new AdminFarmVerificationListResponse(
-                farm.getFarmer().getId(),
-                farm.getFarmerName() != null ? farm.getFarmerName() : farm.getFarmer().getUser().getName(),
-                farm.getFarmName(),
+                farmerId,
+                farmerName,
+                farm.getFarmName() != null ? farm.getFarmName() : "Unnamed Farm",
                 status,
+                farm.getVerifiedByAdmin() != null ? farm.getVerifiedByAdmin() : ("VERIFIED".equals(status) ? "System Admin" : null),
                 farm.getVerificationRequestedOn()
             );
         }).toList();
@@ -217,6 +249,7 @@ public class AdminFarmerServiceImpl implements AdminFarmerService {
         response.setFarmVideo(farm.getFarmVideo());
         response.setVerified(farm.getVerified());
         response.setVerifiedOn(farm.getVerifiedOn());
+        response.setVerifiedBy(farm.getVerifiedByAdmin());
         response.setVerificationMessage(farm.getVerificationMessage());
         
         return response;

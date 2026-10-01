@@ -23,6 +23,19 @@ public class SupportRequest {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SupportRequestStatus status = SupportRequestStatus.OPEN;
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.BINARY)
+    @Column(name = "assigned_admin_id")
+    private UUID assignedAdminId;
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.BINARY)
+    @Column(name = "transferred_by_admin_id")
+    private UUID transferredByAdminId;
+    @Column(name = "has_unread_transfer")
+    private Boolean hasUnreadTransfer = false;
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.BINARY)
+    @Column(name = "resolved_by")
+    private UUID resolvedBy;
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     @Column(name = "updated_at")

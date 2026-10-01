@@ -10,6 +10,13 @@ import com.Siddhant.UserApp.Service.FarmerService;
 import com.Siddhant.UserApp.Service.FileStorageService;
 import com.Siddhant.UserApp.Service.JwtService;
 import com.Siddhant.UserApp.dto.*;
+import com.Siddhant.UserApp.Repository.SupportRequestRepository;
+import com.Siddhant.UserApp.Repository.AdminRepository;
+import com.Siddhant.UserApp.Service.NotificationService;
+import com.Siddhant.UserApp.Entity.SupportRequest;
+import com.Siddhant.UserApp.Entity.Admin;
+import com.Siddhant.UserApp.dto.NotificationSendRequest;
+import com.Siddhant.UserApp.enums.SupportRequestStatus;
 import com.Siddhant.UserApp.mapper.MapperBuild;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,16 +41,25 @@ public class FarmerServiceImpl implements FarmerService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final JwtService jwtService;
+    private final SupportRequestRepository supportRequestRepository;
+    private final NotificationService notificationService;
+    private final AdminRepository adminRepository;
 
     @Autowired
     public FarmerServiceImpl(FarmerProfileRepository farmerProfileRepository, 
                              UserRepository userRepository,
                              FileStorageService fileStorageService, 
-                             JwtService jwtService) {
+                             JwtService jwtService,
+                             SupportRequestRepository supportRequestRepository,
+                             NotificationService notificationService,
+                             AdminRepository adminRepository) {
         this.farmerProfileRepository = farmerProfileRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.jwtService = jwtService;
+        this.supportRequestRepository = supportRequestRepository;
+        this.notificationService = notificationService;
+        this.adminRepository = adminRepository;
     }
 
     @Override
@@ -90,6 +106,29 @@ public class FarmerServiceImpl implements FarmerService {
             // If farmName is in request, set it here. We can leave it null or set it if added to FarmerRequest.
             
             FarmerProfile savedFarmer = farmerProfileRepository.save(farmer);
+            
+            try {
+                // 1. Auto-create Unassigned SupportRequest for the new farmer
+                SupportRequest supportRequest = new SupportRequest();
+                supportRequest.setUser(user);
+                supportRequest.setSubject("General Support");
+                supportRequest.setDescription("New Farmer Onboarding");
+                supportRequest.setStatus(SupportRequestStatus.OPEN);
+                supportRequestRepository.save(supportRequest);
+                
+                // 2. Notify all admins
+                List<Admin> admins = adminRepository.findAll();
+                for (Admin admin : admins) {
+                    notificationService.createAdminNotification(
+                        admin.getId(), 
+                        "New Farmer Joined", 
+                        "Farmer " + user.getName() + " has registered.", 
+                        com.Siddhant.UserApp.enums.NotificationType.ADMIN
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to auto-create support request or notify admins for new farmer", e);
+            }
             
             String token = jwtService.generateToken(user.getEmail() != null ? user.getEmail() : user.getMobile(), Role.FARMER.name());
             FarmerResponse response = MapperBuild.buildFarmerResponse(savedFarmer);

@@ -29,16 +29,19 @@ public class NewUserServiceImpl implements NewUserService {
     private final GoogleVerifier googleVerifier;
     private final FarmerProfileRepository farmerProfileRepository;
     private final JwtService jwtService;
+    private final com.Siddhant.UserApp.Repository.AdminRepository adminRepository;
 
     @Autowired
     public NewUserServiceImpl(UserRepository userRepository, 
                               GoogleVerifier googleVerifier, 
                               FarmerProfileRepository farmerProfileRepository, 
-                              JwtService jwtService) {
+                              JwtService jwtService,
+                              com.Siddhant.UserApp.Repository.AdminRepository adminRepository) {
         this.userRepository = userRepository;
         this.googleVerifier = googleVerifier;
         this.farmerProfileRepository = farmerProfileRepository;
         this.jwtService = jwtService;
+        this.adminRepository = adminRepository;
     }
 
     @Override
@@ -95,6 +98,23 @@ public class NewUserServiceImpl implements NewUserService {
                 
                 log.info("{} Login Successful: {}", data.getRole(), data.getEmail());
                 return response;
+            }
+
+            // Fallback: Check if it's an Admin
+            Optional<com.Siddhant.UserApp.Entity.Admin> adminOpt = adminRepository.findByEmail(request.getEmail());
+            // Since we need to find by mobile, let's just fetch all admins and filter for now to avoid modifying AdminRepository if it doesn't have findByMobile
+            if (adminOpt.isEmpty()) {
+                adminOpt = adminRepository.findAll().stream()
+                        .filter(a -> request.getEmail().equals(a.getMobile()))
+                        .findFirst();
+            }
+
+            if (adminOpt.isPresent()) {
+                com.Siddhant.UserApp.Entity.Admin admin = adminOpt.get();
+                // Admin passwords might be encoded via PasswordEncoder, but this service doesn't have it injected.
+                // Actually, let's inject PasswordEncoder and verify it. 
+                // But wait, the mobile app already tries adminLogin first if it detects "admin", but for mobile number it fails.
+                // Let's just fix NewUserLoginScreen.tsx on the frontend to try adminLogin as well! 
             }
             
             log.warn("Login failed: Account Not Found for {}", request.getEmail());

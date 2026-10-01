@@ -14,6 +14,15 @@ public interface SupportRequestService {
     
     // Admin endpoints
     List<SupportRequestResponse> getAllSupportRequests();
+    List<SupportRequestResponse> getUnassignedSupportRequests();
+    List<SupportRequestResponse> getMyAssignedSupportRequests();
+    List<SupportRequestResponse> getResolvedSupportRequests();
+    
     SupportRequestResponse getSupportRequestById(UUID id);
     SupportRequestResponse updateSupportRequestStatus(UUID id, SupportRequestStatus status);
+    
+    // Multi-admin actions
+    SupportRequestResponse assignToMe(UUID id);
+    SupportRequestResponse transferToAdmin(UUID id, UUID newAdminId);
+    SupportRequestResponse resolveSupportRequest(UUID id);
 }

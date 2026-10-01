@@ -31,5 +31,6 @@ public class AdminFarmVerificationDetailResponse {
     private String farmVideo;
     private Boolean verified;
     private LocalDateTime verifiedOn;
+    private String verifiedBy;
     private String verificationMessage; // For rejection reasons
 }
