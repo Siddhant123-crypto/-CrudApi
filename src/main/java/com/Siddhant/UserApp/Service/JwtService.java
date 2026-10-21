@@ -18,6 +18,9 @@ public class JwtService {
     private SecretKey key;
     @PostConstruct
     public void init() {
+        if (secretString == null || secretString.length() < 32) {
+            throw new IllegalArgumentException("JWT secret must be at least 32 characters long for security reasons.");
+        }
         this.key = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
     }private static final long EXPIRATION_TIME =
             7L * 24 * 60 * 60 * 1000;

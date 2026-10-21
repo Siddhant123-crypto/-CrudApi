@@ -33,16 +33,19 @@ public class AuthServiceImpl implements AuthService {
     private final FarmerProfileRepository farmerProfileRepository;
     private final UserRepository userRepository;
     private final com.Siddhant.UserApp.Service.JwtService jwtService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Value("${google.client-id}")
     private String googleClientId;
 
     @Autowired
     public AuthServiceImpl(FarmerProfileRepository farmerProfileRepository, 
                            UserRepository userRepository, 
-                           com.Siddhant.UserApp.Service.JwtService jwtService) {
+                           com.Siddhant.UserApp.Service.JwtService jwtService,
+                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.farmerProfileRepository = farmerProfileRepository;
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -58,7 +61,19 @@ public class AuthServiceImpl implements AuthService {
                 User user = userOptional.get();
                 log.debug("User found: ID={}, Email={}", user.getUserId(), user.getEmail());
                 
-                if (!user.getPassword().equals(request.getPassword())) {
+                boolean passwordMatches = false;
+                String storedPassword = user.getPassword();
+                if (storedPassword != null && request.getPassword() != null) {
+                    if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+                        passwordMatches = passwordEncoder.matches(request.getPassword(), storedPassword);
+                    } else if (storedPassword.equals(request.getPassword())) {
+                        passwordMatches = true;
+                        // Transparently migrate plaintext password to BCrypt
+                        user.setPassword(passwordEncoder.encode(request.getPassword()));
+                        userRepository.save(user);
+                    }
+                }
+                if (!passwordMatches) {
                     return new LoginResponse("Incorrect Password", null, null);
                 }
                 if (user.getStatus() == com.Siddhant.UserApp.Entity.Status.INACTIVE && user.getRole() != Role.FARMER && user.getRole() != Role.CUSTOMER) {

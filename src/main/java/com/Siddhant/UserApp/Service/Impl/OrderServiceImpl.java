@@ -5,12 +5,14 @@ import com.Siddhant.UserApp.Repository.*;
 import com.Siddhant.UserApp.Service.OrderService;
 import com.Siddhant.UserApp.dto.*;
 import com.Siddhant.UserApp.enums.OrderStatus;
+import com.Siddhant.UserApp.enums.PaymentMethod;
 import com.Siddhant.UserApp.enums.PaymentStatus;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,16 +28,19 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final FarmerProfileRepository farmerProfileRepository;
+    private final OrderTrackingRepository orderTrackingRepository;
 
     public OrderServiceImpl(
             OrderRepository orderRepository,
             ProductRepository productRepository,
             UserRepository userRepository,
-            FarmerProfileRepository farmerProfileRepository) {
+            FarmerProfileRepository farmerProfileRepository,
+            OrderTrackingRepository orderTrackingRepository) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.farmerProfileRepository = farmerProfileRepository;
+        this.orderTrackingRepository = orderTrackingRepository;
     }
 
     // ==================== CREATE ORDER ====================
@@ -66,6 +71,11 @@ public class OrderServiceImpl implements OrderService {
         order.setPostalCode(request.getPostalCode());
         order.setState(request.getState());
 
+        PaymentMethod paymentMethod = request.getPaymentMethod();
+        if (paymentMethod == null) {
+            paymentMethod = PaymentMethod.COD;
+        }
+        order.setPaymentMethod(paymentMethod);
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentStatus(PaymentStatus.PENDING);
 
@@ -260,6 +270,27 @@ public class OrderServiceImpl implements OrderService {
         return responses;
     }
 
+    @Override
+    public long getFarmerNewOrdersCount() {
+        FarmerProfile farmer = getLoggedInFarmer();
+        return orderRepository.countUnseenNewOrdersByFarmer(farmer.getId(), OrderStatus.PENDING);
+    }
+
+    @Override
+    @Transactional
+    public void markFarmerOrdersAsSeen() {
+        FarmerProfile farmer = getLoggedInFarmer();
+        List<Order> pendingOrders = orderRepository.findDistinctByOrderItemsFarmer_IdAndStatus(farmer.getId(), OrderStatus.PENDING);
+        for (Order order : pendingOrders) {
+            for (OrderItem item : order.getOrderItems()) {
+                if (item.getFarmer().getId().equals(farmer.getId()) && item.getStatus() == OrderStatus.PENDING && !item.isFarmerViewed()) {
+                    item.setFarmerViewed(true);
+                }
+            }
+        }
+        orderRepository.saveAll(pendingOrders);
+    }
+
     // ==================== ACCEPT ORDER ====================
 
     @Override
@@ -399,6 +430,21 @@ public class OrderServiceImpl implements OrderService {
         if (status == OrderStatus.OUT_FOR_DELIVERY)
             throw new RuntimeException("Out for delivery order cannot be cancelled");
 
+        if (order.getPaymentMethod() != PaymentMethod.COD && order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Paid online order cannot be cancelled automatically. Contact support for refund.");
+        }
+
+        if (order.getCreatedOn() != null) {
+            java.time.Duration duration = java.time.Duration.between(order.getCreatedOn(), java.time.LocalDateTime.now());
+            if (duration.toMillis() > 36000000L) { // 10 hours in millis
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST,
+                        "Order cancellation window of 10 hours has expired.");
+            }
+        }
+
         for (OrderItem item : order.getOrderItems()) {
             if (item.getStatus() != OrderStatus.CANCELLED) {
                 restoreItemStock(item);
@@ -455,7 +501,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public FarmerCancelOrderResponse farmerCancelOrder(UUID orderId) {
+    public FarmerCancelOrderResponse farmerCancelOrder(UUID orderId, String reason) {
 
         if (orderId == null)
             throw new RuntimeException("Order id is required");
@@ -488,6 +534,15 @@ public class OrderServiceImpl implements OrderService {
 
         if (!anyCancelled)
             throw new RuntimeException("No active items to cancel for this farmer");
+
+        if (reason != null && !reason.trim().isEmpty()) {
+            String farmerReason = "Cancelled by Farmer: " + reason.trim();
+            if (order.getCancellationReason() == null || order.getCancellationReason().isEmpty()) {
+                order.setCancellationReason(farmerReason);
+            } else {
+                order.setCancellationReason(order.getCancellationReason() + "\n" + farmerReason);
+            }
+        }
 
         updateOrderOverallStatus(order);
 
@@ -919,6 +974,10 @@ public class OrderServiceImpl implements OrderService {
             order.setStatus(OrderStatus.CANCELLED);
         } else if (allDelivered || allDeliveredOrCancelled) {
             order.setStatus(OrderStatus.DELIVERED);
+            if (order.getPaymentMethod() == com.Siddhant.UserApp.enums.PaymentMethod.COD && order.getPaymentStatus() == PaymentStatus.PENDING) {
+                order.setPaymentStatus(PaymentStatus.PAID);
+                order.setPaidAt(java.time.LocalDateTime.now());
+            }
         } else if (allOutForDeliveryOrBeyond) {
             order.setStatus(OrderStatus.OUT_FOR_DELIVERY);
         } else if (allProcessingOrBeyond) {
@@ -1056,4 +1115,146 @@ public class OrderServiceImpl implements OrderService {
 
         return response;
     }
+
+    // ==================== TRACKING ====================
+
+    @Override
+    @Transactional
+    public void updateTrackingLocation(UUID orderId, TrackingLocationRequest request) {
+        if (orderId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order id is required");
+        if (request == null || request.getLatitude() == null || request.getLongitude() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Latitude and longitude are required");
+        }
+        if (request.getLatitude() < -90 || request.getLatitude() > 90) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid latitude");
+        }
+        if (request.getLongitude() < -180 || request.getLongitude() > 180) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid longitude");
+        }
+
+        FarmerProfile farmer = getLoggedInFarmer();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        checkFarmerOwnership(order, farmer);
+
+        boolean isEligible = false;
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getFarmer().getId().equals(farmer.getId())) {
+                OrderStatus status = item.getStatus();
+                if (status == OrderStatus.OUT_FOR_DELIVERY || status == OrderStatus.PROCESSING || status == OrderStatus.CONFIRMED) {
+                    isEligible = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isEligible) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tracking updates not allowed in the current order status");
+        }
+
+        OrderTracking tracking = orderTrackingRepository.findByOrder_OrderIdAndFarmer_Id(orderId, farmer.getId())
+                .orElseGet(() -> {
+                    OrderTracking t = new OrderTracking();
+                    t.setOrder(order);
+                    t.setFarmer(farmer);
+                    return t;
+                });
+
+        tracking.setLatitude(request.getLatitude());
+        tracking.setLongitude(request.getLongitude());
+        tracking.setLastUpdated(java.time.LocalDateTime.now());
+        orderTrackingRepository.save(tracking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrackingLocationResponse> getTrackingLocation(UUID orderId) {
+        if (orderId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order id is required");
+
+        User customer = getLoggedInCustomer();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getCustomer() == null || !order.getCustomer().getUserId().equals(customer.getUserId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to view this order");
+        }
+
+        List<OrderTracking> trackings = orderTrackingRepository.findByOrder_OrderId(orderId);
+        List<TrackingLocationResponse> responses = new ArrayList<>();
+
+        for (OrderTracking t : trackings) {
+            boolean isEligible = false;
+            for (OrderItem item : order.getOrderItems()) {
+                if (item.getFarmer().getId().equals(t.getFarmer().getId())) {
+                    OrderStatus status = item.getStatus();
+                    if (status == OrderStatus.OUT_FOR_DELIVERY || status == OrderStatus.PROCESSING || status == OrderStatus.CONFIRMED) {
+                        isEligible = true;
+                        break;
+                    }
+                }
+            }
+            if (isEligible) {
+                String farmerName = t.getFarmer().getUser() != null ? t.getFarmer().getUser().getName() : "Unknown";
+                responses.add(new TrackingLocationResponse(
+                        farmerName,
+                        t.getFarmer().getFarmName(),
+                        t.getLatitude(),
+                        t.getLongitude(),
+                        t.getLastUpdated()
+                ));
+            }
+        }
+        
+        if (responses.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tracking has not started for this order yet");
+        }
+
+        return responses;
+    }
+
+    // ==================== AUTO-CANCEL STALE UNPAID ONLINE ORDERS ====================
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean autoCancelStaleOrder(UUID orderId, String reason) {
+        if (orderId == null) {
+            return false;
+        }
+
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            return false;
+        }
+
+        // Race protection: skip if order was paid concurrently (e.g. late webhook or user verification)
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            return false;
+        }
+
+        // Safety: only cancel orders where paymentMethod is ONLINE, status is PENDING, and paymentStatus is PENDING or FAILED
+        if (order.getPaymentMethod() != PaymentMethod.ONLINE ||
+                order.getStatus() != OrderStatus.PENDING ||
+                (order.getPaymentStatus() != PaymentStatus.PENDING && order.getPaymentStatus() != PaymentStatus.FAILED)) {
+            return false;
+        }
+
+        // Restore stock for items using the same logic as normal cancellation
+        if (order.getOrderItems() != null) {
+            for (OrderItem item : order.getOrderItems()) {
+                if (item.getStatus() != OrderStatus.CANCELLED) {
+                    restoreItemStock(item);
+                    item.setStatus(OrderStatus.CANCELLED);
+                }
+            }
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancellationReason(reason != null && !reason.trim().isEmpty()
+                ? reason.trim()
+                : "Payment not completed in time");
+        orderRepository.save(order);
+        return true;
+    }
 }
+

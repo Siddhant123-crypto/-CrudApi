@@ -44,10 +44,16 @@ public class SupportRequest {
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
-        }if (status == null) {
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+        if (status == null) {
             status = SupportRequestStatus.OPEN;
         }
-    }@PreUpdate
+    }
+
+    @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }

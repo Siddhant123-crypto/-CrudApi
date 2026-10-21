@@ -49,4 +49,7 @@ public class FarmerProfile {
     private String verificationMessage;
     @Column(name = "verification_requested_on")
     private LocalDateTime verificationRequestedOn;
+    
+    @Column(name = "razorpay_linked_account_id")
+    private String razorpayLinkedAccountId;
 }

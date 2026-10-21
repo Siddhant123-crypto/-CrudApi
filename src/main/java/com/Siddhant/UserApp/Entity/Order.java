@@ -66,6 +66,10 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
     private String transactionId;
+    
+    private String razorpayOrderId;
+    private String razorpayPaymentId;
+    private LocalDateTime paidAt;
     public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
     }

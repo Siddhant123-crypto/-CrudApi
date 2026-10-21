@@ -44,6 +44,7 @@ public class FarmerServiceImpl implements FarmerService {
     private final SupportRequestRepository supportRequestRepository;
     private final NotificationService notificationService;
     private final AdminRepository adminRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
     public FarmerServiceImpl(FarmerProfileRepository farmerProfileRepository, 
@@ -52,7 +53,8 @@ public class FarmerServiceImpl implements FarmerService {
                              JwtService jwtService,
                              SupportRequestRepository supportRequestRepository,
                              NotificationService notificationService,
-                             AdminRepository adminRepository) {
+                             AdminRepository adminRepository,
+                             org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.farmerProfileRepository = farmerProfileRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
@@ -60,6 +62,7 @@ public class FarmerServiceImpl implements FarmerService {
         this.supportRequestRepository = supportRequestRepository;
         this.notificationService = notificationService;
         this.adminRepository = adminRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -76,7 +79,7 @@ public class FarmerServiceImpl implements FarmerService {
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
-            user.setPassword(request.getPassword());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setState(request.getState());
             user.setVillage(request.getVillage());
             user.setAddress(request.getAddress());
@@ -173,7 +176,7 @@ public class FarmerServiceImpl implements FarmerService {
             user.setEmail(request.getEmail());
             user.setState(request.getState());
             if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-                user.setPassword(request.getPassword());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
             }
             user.setUpdatedBy(request.getName());
             user.setUpdatedOn(LocalDateTime.now());

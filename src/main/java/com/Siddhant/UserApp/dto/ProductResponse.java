@@ -3,6 +3,7 @@ import com.Siddhant.UserApp.Entity.ProductUnit;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 @Data
 @NoArgsConstructor
@@ -29,6 +30,7 @@ public class ProductResponse {
     private String status;
     private String createdBy;
     private LocalDateTime createdOn;
+    private LocalTime addedTime;
     private String updatedBy;
     private LocalDateTime updatedOn;
     private Double averageRating;

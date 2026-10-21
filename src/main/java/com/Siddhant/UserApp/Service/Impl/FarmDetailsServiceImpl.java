@@ -61,6 +61,10 @@ public class FarmDetailsServiceImpl implements FarmDetailsService {
         farmDetails.setSoilType(request.getSoilType());
         farmDetails.setAboutFarm(request.getAboutFarm());
 
+        // Sync farm_name to FarmerProfile so it is available for GPS tracking
+        farmerProfile.setFarmName(request.getFarmName());
+        farmerProfileRepository.save(farmerProfile);
+
         // File handling
         if (farmerPhoto != null && !farmerPhoto.isEmpty()) {
             String photoPath = farmFileStorageService.saveFarmerPhoto(farmerPhoto);
@@ -104,6 +108,13 @@ public class FarmDetailsServiceImpl implements FarmDetailsService {
         if (request.getIrrigationSource() != null) farmDetails.setIrrigationSource(request.getIrrigationSource());
         if (request.getSoilType() != null) farmDetails.setSoilType(request.getSoilType());
         if (request.getAboutFarm() != null) farmDetails.setAboutFarm(request.getAboutFarm());
+
+        // Sync farm_name to FarmerProfile so it is available for GPS tracking
+        if (request.getFarmName() != null) {
+            FarmerProfile farmerProfile = farmDetails.getFarmer();
+            farmerProfile.setFarmName(request.getFarmName());
+            farmerProfileRepository.save(farmerProfile);
+        }
 
         // File handling
         if (farmerPhoto != null && !farmerPhoto.isEmpty()) {

@@ -12,6 +12,8 @@ import com.Siddhant.UserApp.enums.OrderStatus;
 
 import java.util.List;
 import java.util.UUID;
+import com.Siddhant.UserApp.dto.TrackingLocationRequest;
+import com.Siddhant.UserApp.dto.TrackingLocationResponse;
 
 public interface OrderService {
 
@@ -42,6 +44,10 @@ public interface OrderService {
             OrderStatus status
     );
 
+    long getFarmerNewOrdersCount();
+
+    void markFarmerOrdersAsSeen();
+
     // FARMER ACCEPT ORDER
     OrderResponse acceptOrder(
             UUID orderId
@@ -67,7 +73,8 @@ public interface OrderService {
 
     // FARMER CANCEL ORDER
     FarmerCancelOrderResponse farmerCancelOrder(
-            UUID orderId
+            UUID orderId,
+            String reason
     );
 
     // UPDATE PAYMENT
@@ -84,4 +91,11 @@ public interface OrderService {
 
     // GENERAL ORDER SUMMARY
     GeneralOrderSummaryResponse getGeneralOrderSummary();
+
+    // TRACKING
+    void updateTrackingLocation(UUID orderId, TrackingLocationRequest request);
+    List<TrackingLocationResponse> getTrackingLocation(UUID orderId);
+
+    // AUTO-CANCEL STALE UNPAID ONLINE ORDERS
+    boolean autoCancelStaleOrder(UUID orderId, String reason);
 }

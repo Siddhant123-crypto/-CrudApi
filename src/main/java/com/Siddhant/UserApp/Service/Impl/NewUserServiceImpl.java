@@ -30,18 +30,21 @@ public class NewUserServiceImpl implements NewUserService {
     private final FarmerProfileRepository farmerProfileRepository;
     private final JwtService jwtService;
     private final com.Siddhant.UserApp.Repository.AdminRepository adminRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
     public NewUserServiceImpl(UserRepository userRepository, 
                               GoogleVerifier googleVerifier, 
                               FarmerProfileRepository farmerProfileRepository, 
                               JwtService jwtService,
-                              com.Siddhant.UserApp.Repository.AdminRepository adminRepository) {
+                              com.Siddhant.UserApp.Repository.AdminRepository adminRepository,
+                              org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.googleVerifier = googleVerifier;
         this.farmerProfileRepository = farmerProfileRepository;
         this.jwtService = jwtService;
         this.adminRepository = adminRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -56,7 +59,18 @@ public class NewUserServiceImpl implements NewUserService {
             
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if (!user.getPassword().equals(request.getPassword())) {
+                boolean passwordMatches = false;
+                String storedPassword = user.getPassword();
+                if (storedPassword != null && request.getPassword() != null) {
+                    if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+                        passwordMatches = passwordEncoder.matches(request.getPassword(), storedPassword);
+                    } else if (storedPassword.equals(request.getPassword())) {
+                        passwordMatches = true;
+                        user.setPassword(passwordEncoder.encode(request.getPassword()));
+                        userRepository.save(user);
+                    }
+                }
+                if (!passwordMatches) {
                     return new NewUserLoginResponse("Incorrect Password", null);
                 }
                 user.checkAndClearExpiredBlock();

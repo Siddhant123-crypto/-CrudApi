@@ -14,6 +14,8 @@ public class OrderItem {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status = OrderStatus.PENDING;
+    @Column(nullable = false)
+    private boolean farmerViewed = false;
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID orderItemId;

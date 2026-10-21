@@ -32,39 +32,19 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final FarmerProfileRepository farmerProfileRepository;
     private final NotificationService notificationService;
-
-    @Autowired
+     @Autowired
     public ProductServiceImpl(ProductRepository productRepository, FarmerProfileRepository farmerProfileRepository, NotificationService notificationService) {
         this.productRepository = productRepository;
         this.farmerProfileRepository = farmerProfileRepository;
         this.notificationService = notificationService;
-    }
-    // =========================================================
-    // SAVE PRODUCT
-    // =========================================================
-    @Override
+    }@Override
     public ProductResponse saveProduct(ProductRequest request, MultipartFile photo, MultipartFile video) {
-        try {
-            // -------------------------------------------------
-            // VALIDATION
-            // -------------------------------------------------
-            if (request == null) {throw new RuntimeException("Product data is required");
-            }
-            if (request.getFarmerId() == null) {throw new RuntimeException("Farmer ID is required");
-            }
-            if (request.getProductName() == null || request.getProductName().trim().isEmpty()) {throw new RuntimeException("Product name is required");
-            }
-            if (request.getPrice() == null || request.getPrice() < 0) {throw new RuntimeException("Valid product price is required");
-            }
-            if (request.getQuantity() == null || request.getQuantity() < 0) {throw new RuntimeException("Valid product quantity is required");
-            }
-            // -------------------------------------------------
-            // FIND FARMER
-            // -------------------------------------------------
-            FarmerProfile farmer = farmerProfileRepository.findById(request.getFarmerId()).orElseThrow(() -> new RuntimeException("Farmer not found"));
-            // -------------------------------------------------
-            // CREATE PRODUCT
-            // -------------------------------------------------
+        try {if (request == null) {throw new RuntimeException("Product data is required");
+            }if (request.getFarmerId() == null) {throw new RuntimeException("Farmer ID is required");
+            }if (request.getProductName() == null || request.getProductName().trim().isEmpty()) {throw new RuntimeException("Product name is required");
+            }if (request.getPrice() == null || request.getPrice() < 0) {throw new RuntimeException("Valid product price is required");
+            }if (request.getQuantity() == null || request.getQuantity() < 0) {throw new RuntimeException("Valid product quantity is required");
+            }FarmerProfile farmer = farmerProfileRepository.findById(request.getFarmerId()).orElseThrow(() -> new RuntimeException("Farmer not found"));
             Product product = new Product();
             product.setFarmer(farmer);
             product.setProductName(request.getProductName().trim());
@@ -74,47 +54,28 @@ public class ProductServiceImpl implements ProductService {
             product.setUnit(request.getUnit());
             product.setDescription(request.getDescription());
             product.setHarvestDate(request.getHarvestDate());
-            // -------------------------------------------------
-            // PHOTO
-            // -------------------------------------------------
             if (photo != null && !photo.isEmpty()) {
                 String photoFileName = saveFile(photo);
                 product.setProductPhoto(photoFileName);
-            }
-            // -------------------------------------------------
-            // OPTIONAL VIDEO
-            // -------------------------------------------------
-            if (video != null && !video.isEmpty()) {String videoFileName = saveFile(video);
+            }if (video != null && !video.isEmpty()) {String videoFileName = saveFile(video);
                 product.setProductVideo(videoFileName);
-            }
-            // -------------------------------------------------
-            // AUDIT FIELDS
-            // -------------------------------------------------
-            String farmerName = farmer.getUser().getName();
+            }String farmerName = farmer.getUser().getName();
             LocalDateTime now = LocalDateTime.now();
             product.setCreatedBy(farmerName);
             product.setCreatedOn(now);
+            product.setAddedTime(now.toLocalTime());
             product.setUpdatedBy(farmerName);
             product.setUpdatedOn(now);
             product.setIsActive(true); // Active immediately
             product.setIsDelete(false);
             product.setStatus("ACTIVE");
-            // -------------------------------------------------
-            // SAVE
-            // -------------------------------------------------
             Product savedProduct = productRepository.save(product);
             log.info("Product saved successfully: {}", savedProduct.getProductId());
-
             return MapperBuild.buildProductResponse(savedProduct);
-        } catch (Exception e) {
-            log.error("Error saving product", e);
+        } catch (Exception e) {log.error("Error saving product", e);
             throw new RuntimeException("Error saving product: " + e.getMessage());
         }
-    }
-    // =========================================================
-    // GET ALL PRODUCTS
-    // =========================================================
-    @Override
+    }@Override
     public List<ProductResponse> getAllProducts() {
         List<Product> products = productRepository.findByIsActiveTrueAndIsDeleteFalse();
         log.debug("Total Products retrieved: {}", products.size());
@@ -122,34 +83,15 @@ public class ProductServiceImpl implements ProductService {
         for (Product product : products) {
             if (product.getFarmer() == null || product.getFarmer().getUser() == null) {continue;}
             responseList.add(MapperBuild.buildProductResponse(product));
-        }
-        return responseList;
-    }
-    // =========================================================
-    // GET PRODUCT BY ID
-    // =========================================================
-    @Override
+        }return responseList;
+    }@Override
     public ProductResponse getProductById(UUID id) {
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
         return MapperBuild.buildProductResponse(product);
-    }
-    // =========================================================
-    // UPDATE PRODUCT
-    // =========================================================
-    @Override
+    }@Override
     public ProductUpdateResponse updateProduct(UUID id, ProductRequest request, MultipartFile photo, MultipartFile video) {
-        try {
-            // -------------------------------------------------
-            // FIND PRODUCT
-            // -------------------------------------------------
-            Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
-            // -------------------------------------------------
-            // FIND FARMER
-            // -------------------------------------------------
+        try {Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
             FarmerProfile farmer = farmerProfileRepository.findById(request.getFarmerId()).orElseThrow(() -> new RuntimeException("Farmer not found"));
-            // -------------------------------------------------
-            // UPDATE PRODUCT DETAILS
-            // -------------------------------------------------
             product.setFarmer(farmer);
             product.setProductName(request.getProductName().trim());
             product.setCategory(request.getCategory());
@@ -158,50 +100,25 @@ public class ProductServiceImpl implements ProductService {
             product.setUnit(request.getUnit());
             product.setDescription(request.getDescription());
             product.setHarvestDate(request.getHarvestDate());
-            // -------------------------------------------------
-            // UPDATE PHOTO ONLY IF NEW PHOTO PROVIDED
-            // -------------------------------------------------
             if (photo != null && !photo.isEmpty()) {String photoFileName = saveFile(photo);
                 product.setProductPhoto(photoFileName);
-            }
-            // -------------------------------------------------
-            // UPDATE VIDEO ONLY IF NEW VIDEO PROVIDED
-            // -------------------------------------------------
-            if (video != null && !video.isEmpty()) {
+            }if (video != null && !video.isEmpty()) {
                 String videoFileName = saveFile(video);
                 product.setProductVideo(videoFileName);
             } else if (Boolean.TRUE.equals(request.getRemoveVideo())) {
                 product.setProductVideo(null);
-            }
-            // -------------------------------------------------
-            // UPDATE AUDIT DATA
-            // -------------------------------------------------
-            product.setUpdatedBy(farmer.getUser().getName());
+            }product.setUpdatedBy(farmer.getUser().getName());
             product.setUpdatedOn(LocalDateTime.now());
-            // -------------------------------------------------
-            // SAVE UPDATED PRODUCT
-            // -------------------------------------------------
             Product updatedProduct = productRepository.save(product);
             log.info("Product updated successfully: {}", id);
-            // -------------------------------------------------
-            // BUILD RESPONSE
-            // -------------------------------------------------
             ProductResponse response = MapperBuild.buildProductResponse(updatedProduct);
-            // -------------------------------------------------
-            // RETURN MESSAGE + RESPONSE
-            // -------------------------------------------------
             return new ProductUpdateResponse("Product updated successfully", response);
         } catch (Exception e) {log.error("Error updating product {}", id, e);
             throw new RuntimeException("Error updating product: " + e.getMessage());
         }
-    }
-    // =========================================================
-    // DELETE PRODUCT
-    // =========================================================
-    @Override
+    }@Override
     public String deleteProduct(UUID id) {
-        try {
-            Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        try {Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
             product.setIsDelete(true);
             product.setIsActive(false);
             product.setStatus("DELETED");
@@ -213,31 +130,23 @@ public class ProductServiceImpl implements ProductService {
             log.error("Error deleting product {}", id, e);
             return "Error deleting product: " + e.getMessage();
         }
-    }
-    // =========================================================
-    // SAVE FILE
-    // =========================================================
-    private String saveFile(MultipartFile file) {
+    }private String saveFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("File is empty");
-        }
-        try {
+        }try {
             File folder = new File(uploadDir);
             if (!folder.exists()) {
                 boolean created = folder.mkdirs();
                 if (!created && !folder.exists()) {
                     throw new RuntimeException("Unable to create upload directory"
                     );
-                }
-                log.info("Upload directory created: {}", uploadDir
+                }log.info("Upload directory created: {}", uploadDir
                 );
-            }
-            String originalFileName = file.getOriginalFilename();
+            }String originalFileName = file.getOriginalFilename();
             String extension = "";
             if (originalFileName != null && originalFileName.contains(".")) {
                 extension = originalFileName.substring(originalFileName.lastIndexOf("."));
-            }
-            String fileName = UUID.randomUUID() + extension;
+            }String fileName = UUID.randomUUID() + extension;
             File destination = new File(folder, fileName);
             log.debug("Saving file to: {}", destination.getAbsolutePath());
             Files.copy(file.getInputStream(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -247,79 +156,50 @@ public class ProductServiceImpl implements ProductService {
             log.error("File upload failed", e);
             throw new RuntimeException("File upload failed: " + e.getMessage());
         }
-    }
-    // =========================================================
-    // SEARCH PRODUCTS
-    // =========================================================
-    @Override
+    }@Override
     public List<ProductResponse> searchProducts(String keyword) {
         List<Product> products = productRepository.findByProductNameContainingIgnoreCaseAndIsActiveTrueAndIsDeleteFalse(keyword);
         return products.stream()
             .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
             .map(MapperBuild::buildProductResponse).toList();
-    }
-    // =========================================================
-    // PRICE RANGE
-    // =========================================================
-    @Override
+    }@Override
     public List<ProductResponse> findByPriceBetween(Double minPrice, Double maxPrice) {
         return productRepository.findByPriceBetweenAndIsActiveTrueAndIsDeleteFalse(minPrice, maxPrice).stream()
             .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
             .map(MapperBuild::buildProductResponse).toList();
-    }
-    @Override
+    }@Override
     public List<ProductResponse> filterByPrice(Double minPrice, Double maxPrice) {
         return productRepository.findByPriceBetweenAndIsActiveTrueAndIsDeleteFalse(minPrice, maxPrice).stream()
             .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
             .map(MapperBuild::buildProductResponse).toList();
-    }
-    @Override
+    }@Override
     public List<ProductResponse> filterByCategoryAndPrice(String category, Double minPrice, Double maxPrice) {
         return productRepository.findByCategoryIgnoreCaseAndPriceBetweenAndIsActiveTrueAndIsDeleteFalse(category, minPrice, maxPrice).stream()
             .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
             .map(MapperBuild::buildProductResponse).toList();
-    }    // =========================================================
-    // PRODUCTS BY FARMER
-    // =========================================================
-    @Override
+    }@Override
     public List<Product> getProductsByFarmer(UUID farmerId) {FarmerProfile farmer = farmerProfileRepository.findById(farmerId).orElseThrow(() -> new RuntimeException("Farmer not found"));return productRepository.findByFarmer(farmer);}
-    // =========================================================
-    // ACTIVE PRODUCTS
-    // =========================================================
     @Override
     public List<ProductResponse> getActiveProducts() {
         return productRepository.findByIsActiveTrueAndIsDeleteFalse().stream()
             .filter(product -> product.getFarmer() != null && product.getFarmer().getUser() != null)
             .map(MapperBuild::buildProductResponse).toList();
-    }
-    // =========================================================
-    // TOGGLE STATUS
-    // =========================================================
-    @Override
+    }@Override
     public ProductResponse toggleProductStatus(UUID id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Product not found"));
-        
         if ("ACTIVE".equalsIgnoreCase(product.getStatus()) || Boolean.TRUE.equals(product.getIsActive())) {
             product.setIsActive(false);
             product.setStatus("INACTIVE");
         } else {
             product.setIsActive(true);
             product.setStatus("ACTIVE");
-        }
-        product.setUpdatedOn(LocalDateTime.now());
+        }product.setUpdatedOn(LocalDateTime.now());
         Product savedProduct = productRepository.save(product);
         log.info("Product status toggled to {}: {}", savedProduct.getStatus(), id);
         return MapperBuild.buildProductResponse(savedProduct);
-    }
-    // =========================================================
-    // UPLOAD PHOTO SEPARATELY
-    // =========================================================
-    @Override
+    }@Override
     public String uploadPhoto(UUID productId, MultipartFile photo) {Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));String fileName = saveFile(photo);product.setProductPhoto(fileName);product.setUpdatedOn(LocalDateTime.now());productRepository.save(product);return "Product photo uploaded successfully";}
-    // =========================================================
-    // UPLOAD VIDEO SEPARATELY
-    // =========================================================
     @Override
     public String uploadVideo(UUID productId, MultipartFile video) {Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));String fileName = saveFile(video);product.setProductVideo(fileName);product.setUpdatedOn(LocalDateTime.now());productRepository.save(product);return "Product video uploaded successfully";
     }

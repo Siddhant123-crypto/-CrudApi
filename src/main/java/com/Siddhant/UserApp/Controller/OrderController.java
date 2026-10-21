@@ -37,6 +37,17 @@ public class OrderController {
     getFarmerOrdersByStatus(@PathVariable OrderStatus status) {
         List<OrderResponse> response = orderService.getFarmerOrdersByStatus(status);
         return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/farmer/new-orders-count")
+    public ResponseEntity<Long> getFarmerNewOrdersCount() {
+        return ResponseEntity.ok(orderService.getFarmerNewOrdersCount());
+    }
+
+    @PutMapping("/farmer/mark-orders-seen")
+    public ResponseEntity<Void> markFarmerOrdersAsSeen() {
+        orderService.markFarmerOrdersAsSeen();
+        return ResponseEntity.ok().build();
     }@PutMapping("/{orderId}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable UUID orderId, @RequestParam OrderStatus status) {
         OrderResponse response = orderService.updateOrderStatus(orderId, status);
@@ -55,8 +66,8 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }@PutMapping("/{orderId}/farmer-cancel")
     public ResponseEntity<FarmerCancelOrderResponse>
-    farmerCancelOrder(@PathVariable UUID orderId) {
-        FarmerCancelOrderResponse response = orderService.farmerCancelOrder(orderId);
+    farmerCancelOrder(@PathVariable UUID orderId, @RequestParam(required = false) String reason) {
+        FarmerCancelOrderResponse response = orderService.farmerCancelOrder(orderId, reason);
         return ResponseEntity.ok(response);
     }@PutMapping("/{orderId}/payment")
     public ResponseEntity<PaymentResponse> updatePayment(@PathVariable UUID orderId, @RequestBody PaymentRequest request) {
@@ -67,5 +78,19 @@ public class OrderController {
     public ResponseEntity<OrderResponse> acceptOrder(@PathVariable UUID orderId) {
         OrderResponse response = orderService.acceptOrder(orderId);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{orderId}/tracking/location")
+    public ResponseEntity<String> updateTrackingLocation(
+            @PathVariable UUID orderId,
+            @RequestBody TrackingLocationRequest request) {
+        orderService.updateTrackingLocation(orderId, request);
+        return ResponseEntity.ok("Location updated successfully");
+    }
+
+    @GetMapping("/{orderId}/tracking")
+    public ResponseEntity<List<TrackingLocationResponse>> getTrackingLocation(@PathVariable UUID orderId) {
+        List<TrackingLocationResponse> responses = orderService.getTrackingLocation(orderId);
+        return ResponseEntity.ok(responses);
     }
 }

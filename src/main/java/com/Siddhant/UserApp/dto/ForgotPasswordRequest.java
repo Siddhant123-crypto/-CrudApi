@@ -1,8 +1,12 @@
 package com.Siddhant.UserApp.dto;
+
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 @Data
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class ForgotPasswordRequest {
     private String email;
     private String password;

@@ -12,9 +12,12 @@ import com.Siddhant.UserApp.dto.ForgotPasswordRequest;
 public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     private static final Logger log = LoggerFactory.getLogger(ForgotPasswordServiceImpl.class);
     private final ForgetUserRepository forgetUserRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired
-    public ForgotPasswordServiceImpl(ForgetUserRepository forgetUserRepository) {
+    public ForgotPasswordServiceImpl(ForgetUserRepository forgetUserRepository,
+                                     org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.forgetUserRepository = forgetUserRepository;
+        this.passwordEncoder = passwordEncoder;
     }
     @Override
     public String updatePassword(ForgotPasswordRequest request) {
@@ -27,7 +30,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
             if (!request.getPassword().equals(request.getConfirmPassword())) {
                 return "Password not match";
             }
-            user.setPassword(request.getPassword());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             forgetUserRepository.save(user);
             log.info("Password updated successfully for email: {}", request.getEmail());
             return "Password updated successfully";

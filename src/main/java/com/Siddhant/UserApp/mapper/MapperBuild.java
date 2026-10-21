@@ -58,6 +58,7 @@ public class MapperBuild {
         response.setCreatedBy(product.getCreatedBy());
         response.setCreatedOn(product.getCreatedOn());
         response.setUpdatedBy(product.getUpdatedBy());
+        response.setAddedTime(product.getAddedTime());
         response.setUpdatedOn(product.getUpdatedOn());
         response.setIsActive(product.getIsActive());
         response.setIsDelete(product.getIsDelete());

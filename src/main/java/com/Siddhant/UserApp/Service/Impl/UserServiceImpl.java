@@ -30,16 +30,19 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final JwtService jwtService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
     public UserServiceImpl(FileStorageService fileStorageService, 
                            UserRepository userRepository, 
                            CustomerRepository customerRepository,
-                           JwtService jwtService) {
+                           JwtService jwtService,
+                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -74,7 +77,7 @@ public class UserServiceImpl implements UserService {
             user.setName(request.getName());
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
-            user.setPassword(request.getPassword());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setState(request.getState());
             user.setVillage(request.getVillage());
             user.setAddress(request.getAddress());
@@ -202,7 +205,7 @@ public class UserServiceImpl implements UserService {
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
             if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-                user.setPassword(request.getPassword());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
             }
             user.setState(request.getState());
             user.setVillage(request.getVillage());
